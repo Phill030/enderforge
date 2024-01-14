@@ -21,7 +21,7 @@ pub struct PlayLogin {
     pub reduced_debug_info: bool,
     pub enable_respawn_screen: bool,
     pub do_limited_crafting: bool,
-    pub dimension_type: Nbt,
+    pub dimension_type: String,
     pub dimension_name: String,
     pub hashed_seed: i64,
     pub game_mode: u8,
@@ -90,7 +90,7 @@ impl Default for PlayLogin {
             reduced_debug_info: false,
             enable_respawn_screen: true,
             do_limited_crafting: false,
-            dimension_type, // Nbt (Registry)
+            dimension_type: "overworld".to_string(), // Nbt (Registry)
             dimension_name: "overworld".to_string(),
             hashed_seed: 0x279dfc89i64,
             game_mode: 1,
