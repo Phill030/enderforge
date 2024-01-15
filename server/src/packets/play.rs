@@ -70,16 +70,6 @@ impl Default for PlayLogin {
             map
         });
 
-        let dimension_type = Nbt::new("test", {
-            let mut map = HashMap::new();
-            map
-        });
-
-        let mut buffer = vec![];
-        dimension_type2.to_networked_writer(&mut buffer).unwrap();
-        println!("{:X?}", buffer);
-
-        //
         PlayLogin {
             entity_id: 0,
             is_hardcore: false,
@@ -92,7 +82,7 @@ impl Default for PlayLogin {
             do_limited_crafting: false,
             dimension_type: "overworld".to_string(), // Nbt (Registry)
             dimension_name: "overworld".to_string(),
-            hashed_seed: 0x279dfc89i64,
+            hashed_seed: 123456789i64,
             game_mode: 1,
             previous_game_mode: -1,
             is_debug: true,
