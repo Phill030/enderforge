@@ -1,3 +1,4 @@
+pub mod chunk;
 pub mod config;
 pub mod handshake;
 pub mod login;
