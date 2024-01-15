@@ -109,6 +109,7 @@ impl From<Position> for u64 {
     }
 }
 
+/// https://wiki.vg/Protocol#BitSet
 pub struct BitSet(pub Vec<i64>);
 impl BitSet {
     pub fn new(data: Vec<i64>) -> Self {
