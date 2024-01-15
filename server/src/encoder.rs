@@ -219,13 +219,11 @@ impl Encoder for Position {
 
 impl<T: Encoder> Encoder for Option<T> {
     fn encode<W: Write>(&self, writer: &mut W) -> Result<(), EncodeError> {
-        if let Some(val) = self {
-            val.encode(writer)?;
+        Ok(if let Some(val) = self {
+            val.encode(writer)?
         } else {
-            0.encode(writer)?;
-        }
-
-        Ok(())
+            0u8.encode(writer)? // u8!!
+        })
     }
 }
 
