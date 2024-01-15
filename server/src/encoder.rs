@@ -1,6 +1,6 @@
 use crate::{
     errors::EncodeError,
-    types::{Position, VarInt, VarLong},
+    types::{BitSet, Position, VarInt, VarLong},
     utils::MAX_STRING_LEN,
 };
 use byteorder::{BigEndian, WriteBytesExt};
@@ -214,6 +214,32 @@ impl Encoder for Position {
         Ok(writer.write_u64::<BigEndian>(
             ((self.x as u64 & 0x03FF_FFFF) << 38) | ((self.z as u64 & 0x03FF_FFFF) << 12) | (self.y as u64 & 0xFFF),
         )?)
+    }
+}
+
+// TODO: Replace u8 with T
+// TODO: Decoder for [u8; N]
+impl<const N: usize> Encoder for [u8; N]
+where
+    [u8; N]: Sized,
+{
+    fn encode<W: Write>(&self, writer: &mut W) -> Result<(), EncodeError> {
+        writer.write_var_i32(self.len().into())?;
+        writer.write_all(self)?;
+        Ok(())
+    }
+}
+
+// TODO: Decoder for BitSet
+impl Encoder for BitSet {
+    fn encode<W: Write>(&self, writer: &mut W) -> Result<(), EncodeError> {
+        writer.write_var_i32(self.0.len().into())?;
+
+        for val in &self.0 {
+            writer.write_i64::<BigEndian>(*val)?;
+        }
+
+        Ok(())
     }
 }
 
