@@ -108,3 +108,14 @@ impl From<Position> for u64 {
         ((value.x as u64 & 0x03FF_FFFF) << 38) | ((value.z as u64 & 0x03FF_FFFF) << 12) | (value.y as u64 & 0xFFF)
     }
 }
+
+pub struct BitSet(pub Vec<i64>);
+impl BitSet {
+    pub fn new(data: Vec<i64>) -> Self {
+        Self(data)
+    }
+
+    pub fn empty() -> Self {
+        Self(vec![])
+    }
+}
