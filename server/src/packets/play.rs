@@ -47,29 +47,6 @@ pub struct Death {
 
 impl Default for PlayLogin {
     fn default() -> Self {
-        let dimension_type2 = Nbt::new("minecraft:dimension_type", {
-            let mut map = HashMap::new();
-            map.insert("fixed_time", Tag::Long(12000));
-            map.insert("has_skylight", Tag::Byte(1));
-            map.insert("has_ceiling", Tag::Byte(0));
-            map.insert("ultrawarm", Tag::Byte(0));
-            map.insert("natural", Tag::Byte(1));
-            map.insert("coordinate_scale", Tag::Double(7f64));
-            map.insert("bed_works", Tag::Byte(1));
-            map.insert("respawn_anchor_works", Tag::Byte(1));
-            map.insert("min_y", Tag::Int(-64));
-            map.insert("height", Tag::Int(384));
-            map.insert("logical_height", Tag::Int(384));
-            map.insert("infiniburn", Tag::String("#infiniburn_overworld".to_string()));
-            map.insert("effects", Tag::String("overworld".to_string()));
-            map.insert("ambient_light", Tag::Float(0.0));
-            map.insert("piglin_safe", Tag::Byte(0));
-            map.insert("has_raids", Tag::Byte(1));
-            map.insert("monster_spawn_light_level", Tag::Int(7));
-            map.insert("monster_spawn_block_light_limit", Tag::Int(0));
-            map
-        });
-
         PlayLogin {
             entity_id: 0,
             is_hardcore: false,
