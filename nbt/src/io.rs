@@ -76,11 +76,6 @@ impl Nbt {
         }
     }
 
-    /// Networked NBT's are missing the title of the root `TAG_COMPOUND`
-    pub fn from_networked_reder<R: Read + NbtReader>(reader: &mut R) -> io::Result<Nbt> {
-        todo!()
-    }
-
     pub fn from_zlib_reader<R: Read + NbtReader>(reader: &mut R) -> io::Result<Nbt> {
         let mut zlib = ZlibDecoder::new(reader);
         Self::from_reader(&mut zlib)
