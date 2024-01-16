@@ -91,15 +91,15 @@ impl From<u64> for Position {
             x -= (1 << 26) as f32;
         }
 
-        if y >= (1u64 << 11u64) as f32 {
-            y -= (1 << 12) as f32;
-        }
-
         if z >= (1u64 << 25u64) as f32 {
             z -= (1 << 26) as f32;
         }
 
-        Self { x, y, z }
+        if y >= (1u64 << 11u64) as f32 {
+            y -= (1 << 12) as f32;
+        }
+
+        Self { x, z, y }
     }
 }
 
@@ -112,11 +112,83 @@ impl From<Position> for u64 {
 /// https://wiki.vg/Protocol#BitSet
 pub struct BitSet(pub Vec<i64>);
 impl BitSet {
-    pub fn new(data: Vec<i64>) -> Self {
-        Self(data)
+    /// Constructor to create a new BitSet with a specified size
+    ///
+    /// # Arguments
+    ///
+    /// * `size` - The number of bits in the BitSet
+    ///
+    /// # Returns
+    ///
+    /// A new BitSet with all bits initially set to 0
+    pub fn new(size: usize) -> Self {
+        let num_i64s = (size + 63) / 64;
+        let bits = vec![0; num_i64s];
+        Self(bits)
     }
 
+    /// Creates an empty BitSet.
+    ///
+    /// # Returns
+    ///
+    /// A new BitSet instance with no initial data.
     pub fn empty() -> Self {
         Self(vec![])
+    }
+
+    /// Set the bit at the specified index to 1
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - The index of the bit to set
+    pub fn set(&mut self, index: usize) {
+        let i64_index = index / 64;
+        let bit_index = index % 64;
+        self.0[i64_index] |= 1 << bit_index;
+    }
+
+    /// Clear the bit at the specified index to 0
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - The index of the bit to clear
+    pub fn clear(&mut self, index: usize) {
+        let i64_index = index / 64;
+        let bit_index = index % 64;
+        self.0[i64_index] &= !(1 << bit_index);
+    }
+
+    /// Get the value of the bit at the specified index
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - The index of the bit to retrieve
+    ///
+    /// # Returns
+    ///
+    /// The value of the bit at the specified index (true if set, false if not set)
+    pub fn get(&self, index: usize) -> bool {
+        let i64_index = index / 64;
+        let bit_index = index % 64;
+        (self.0[i64_index] & (1 << bit_index)) != 0
+    }
+
+    /// Flip the bit at the specified index (change 1 to 0 and vice versa)
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - The index of the bit to flip
+    pub fn flip(&mut self, index: usize) {
+        let i64_index = index / 64;
+        let bit_index = index % 64;
+        self.0[i64_index] ^= 1 << bit_index;
+    }
+
+    /// Get the size of the BitSet
+    ///
+    /// # Returns
+    /// The size of the BitSet
+    pub fn size(&self) -> usize {
+        self.0.len()
     }
 }
