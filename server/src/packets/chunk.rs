@@ -65,3 +65,20 @@ impl Default for ChunkDataUpdateLight {
 }
 
 // https://wiki.vg/Chunk_Format
+
+//
+#[derive(Streamable)]
+#[packet_id(0x54)]
+pub struct SetDefaultSpawnPosition {
+    location: Position,
+    angle: f32,
+}
+
+impl Default for SetDefaultSpawnPosition {
+    fn default() -> Self {
+        Self {
+            angle: 0f32,
+            location: Position::new(0.0, 0.0, 0.0),
+        }
+    }
+}
