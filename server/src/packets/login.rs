@@ -2,7 +2,7 @@ use crate::decoder::{Decoder, ReceiveFromStream};
 use crate::encoder::EncoderWriteExt;
 use crate::encoder::{Encoder, SendToStream};
 use crate::errors::EncodeError;
-use crate::packets::chunk::ChunkDataUpdateLight;
+use crate::packets::chunk::{ChunkDataUpdateLight, SetDefaultSpawnPosition};
 use crate::packets::config::FinishConfiguration;
 use crate::packets::play::PlayLogin;
 use crate::tcp::server::GameplayState;
@@ -35,6 +35,7 @@ impl LoginAcknowledge {
 
         PlayLogin::default().send(stream).unwrap();
         ChunkDataUpdateLight::default().send(stream).unwrap();
+        SetDefaultSpawnPosition::default().send(stream).unwrap();
         *state = GameplayState::Play;
     }
 }
