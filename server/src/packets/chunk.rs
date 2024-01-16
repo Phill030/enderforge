@@ -2,6 +2,7 @@ use crate::encoder::Encoder;
 use crate::encoder::EncoderWriteExt;
 use crate::errors::EncodeError;
 use crate::types::BitSet;
+use crate::types::Position;
 use crate::types::VarInt;
 use macros::{Serializable, Streamable};
 use nbt::io::Nbt;
@@ -15,7 +16,6 @@ pub struct ChunkDataUpdateLight {
     chunk_x: i32,
     chunk_z: i32,
     heightmaps: Nbt,
-    size: VarInt,
     data: Vec<u8>,
     block_entities: Vec<BlockEntity>,
     sky_light_mask: BitSet,
@@ -52,7 +52,6 @@ impl Default for ChunkDataUpdateLight {
 
                 map
             }),
-            size: VarInt(16),
             data: vec![],
             block_entities: vec![],
             sky_light_mask: BitSet::empty(),
