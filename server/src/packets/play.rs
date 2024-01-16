@@ -4,9 +4,6 @@ use crate::errors::EncodeError;
 use crate::types::Position;
 use crate::types::VarInt;
 use macros::{Serializable, Streamable};
-use nbt::io::Nbt;
-use nbt::types::Tag;
-use std::collections::HashMap;
 use std::io::Write;
 
 #[derive(Streamable)]
