@@ -1,6 +1,6 @@
 use crate::{
     errors::DecodeError,
-    types::{Position, VarInt, VarLong},
+    types::{ByteArray, Position, VarInt, VarLong},
     utils::MAX_STRING_LEN,
 };
 use byteorder::{BigEndian, ReadBytesExt};
@@ -203,6 +203,14 @@ impl Decoder for Position {
 
     fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
         Ok(Position::from(reader.read_u64::<BigEndian>()?))
+    }
+}
+
+impl Decoder for ByteArray {
+    type Output = Self;
+
+    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        Ok(ByteArray::from(reader.read_byte_array()?))
     }
 }
 
