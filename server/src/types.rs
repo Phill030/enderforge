@@ -192,3 +192,18 @@ impl BitSet {
         self.0.len()
     }
 }
+
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+pub struct ByteArray(pub Vec<u8>);
+
+impl From<Vec<u8>> for ByteArray {
+    fn from(value: Vec<u8>) -> Self {
+        Self(value)
+    }
+}
+
+impl From<ByteArray> for Vec<u8> {
+    fn from(value: ByteArray) -> Self {
+        value.0
+    }
+}
