@@ -12,7 +12,6 @@ fn main() {
     TcpServer::create(&"0.0.0.0:25565").unwrap();
 }
 
-// https://wiki.vg/Protocol#Configuration
 // https://github.com/Sweattypalms/ferrumc/blob/master/crates/ferrumc_net/src/login_start.rs
 // https://web.mit.edu/rust-lang_v1.25/arch/amd64_ubuntu1404/share/doc/rust/html/book/first-edition/procedural-macros.html
 // https://gist.github.com/WinX64/3675ffee90360e9fc1e45074e49f6ede#file-registry_data-json-L370-L388
