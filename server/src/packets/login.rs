@@ -2,12 +2,16 @@ use crate::decoder::{Decoder, ReceiveFromStream};
 use crate::encoder::EncoderWriteExt;
 use crate::encoder::{Encoder, SendToStream};
 use crate::errors::EncodeError;
-use crate::packets::chunk::{ChunkDataUpdateLight, SetDefaultSpawnPosition};
-use crate::packets::config::FinishConfiguration;
+use crate::packets::chunk::{ChunkDataUpdateLight, SetDefaultSpawnPosition, SynchronizePlayerPosition};
+use crate::packets::config::{FinishConfiguration, RegistryData};
 use crate::packets::play::PlayLogin;
 use crate::tcp::server::GameplayState;
 use crate::types::VarInt;
+use crate::utils::prepare_response;
 use macros::{Receivable, Serializable, Streamable};
+use nbt::io::Nbt;
+use std::fs::File;
+use std::io::Read;
 use std::ops::Add;
 use std::{
     io::{Cursor, Write},
@@ -29,12 +33,16 @@ impl LoginAcknowledge {
     pub fn handle(state: &mut GameplayState, stream: &mut TcpStream) {
         println!("[LoginAck] Received");
 
-        // TODO: Send Play PACKET
-        // TODO Refactor to make this inside the Play GameplayState!!
+        // TODO Refactor to make this inside the Play GameplayState ?
+        RegistryData::default().send(stream).unwrap();
         FinishConfiguration::default().send(stream).unwrap();
 
         PlayLogin::default().send(stream).unwrap();
+        std::thread::sleep(std::time::Duration::from_secs(1));
         ChunkDataUpdateLight::default().send(stream).unwrap();
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        SynchronizePlayerPosition::default().send(stream).unwrap();
+        std::thread::sleep(std::time::Duration::from_secs(1));
         SetDefaultSpawnPosition::default().send(stream).unwrap();
         *state = GameplayState::Play;
     }
