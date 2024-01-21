@@ -1,4 +1,5 @@
-use crate::decoder::DecoderReadExt;
+use crate::decoder::{DecoderReadExt, ReceiveFromStream};
+use crate::packets::config::{ClientInformation, ReceiveFinishConfiguration, ServerboundPluginMessage};
 use crate::packets::login::LoginAcknowledge;
 use crate::packets::{handshake::HandShake, login::Login, status::Status};
 use std::{
@@ -57,14 +58,30 @@ impl TcpServer {
 
             let mut cursor = Cursor::new(packet_buffer);
             let packet_id = cursor.read_var_i32().unwrap();
-            println!("len_{len} packetId_{packet_id}");
 
             match state {
                 GameplayState::None => HandShake::handle(&mut cursor, &mut state, &mut stream),
                 GameplayState::Status => Status::handle(&mut stream),
                 GameplayState::Login => Login::handle(&mut cursor, &mut state, &mut stream),
                 GameplayState::LoginAcknowledge => LoginAcknowledge::handle(&mut state, &mut stream),
-                GameplayState::Play => {}
+                GameplayState::Play => match packet_id {
+                    0x00 => {
+                        // let client_information = ClientInformation::receive(&mut cursor).unwrap();
+                        // println!("{:?}", client_information);
+                    }
+                    0x01 => {
+                        // let plugin_response = ServerboundPluginMessage::receive(&mut cursor).unwrap();
+                        // println!("{:?}", plugin_response);
+                    }
+                    0x02 => {
+                        // ReceiveFinishConfiguration::receive(&mut cursor).unwrap();
+                        // println!("[Config] Finishing configuration");
+                    }
+                    _ => {
+                        println!("len_{len} packetId_{packet_id}");
+                        println!("{}", String::from_utf8_lossy(&cursor.into_inner()).to_string())
+                    }
+                },
             }
         }
     }
