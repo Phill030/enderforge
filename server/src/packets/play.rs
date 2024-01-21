@@ -47,22 +47,26 @@ impl Default for PlayLogin {
         PlayLogin {
             entity_id: 0,
             is_hardcore: false,
-            world_names: vec!["minecraft:overworld".to_string()],
-            max_players: VarInt(1),
-            view_distance: VarInt(16),
-            simulation_distance: VarInt(16),
+            world_names: vec![
+                "minecraft:overworld".into(),
+                "minecraft:the_nether".into(),
+                "minecraft:the_end".into(),
+            ],
+            max_players: VarInt(123456),
+            view_distance: VarInt(10),
+            simulation_distance: VarInt(10),
             reduced_debug_info: false,
             enable_respawn_screen: true,
             do_limited_crafting: false,
-            dimension_type: "overworld".to_string(), // Nbt (Registry)
-            dimension_name: "overworld".to_string(),
+            dimension_type: "minecraft:overworld".into(),
+            dimension_name: "minecraft:overworld".into(),
             hashed_seed: 123456789i64,
             game_mode: 1,
             previous_game_mode: -1,
             is_debug: true,
             is_flat: true,
             death: None,
-            portal_cooldown: VarInt(31),
+            portal_cooldown: VarInt(0),
         }
     }
 }
