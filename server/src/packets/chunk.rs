@@ -43,21 +43,20 @@ pub struct Light {
 impl Default for ChunkDataUpdateLight {
     fn default() -> Self {
         Self {
-            chunk_x: 1,
-            chunk_z: 1,
+            chunk_x: 0,
+            chunk_z: 0,
             heightmaps: Nbt::new("", {
                 let mut map = HashMap::new();
-                let long_array: Vec<Tag> = vec![];
-                map.insert("MOTION_BLOCKING", Tag::List(long_array));
+                map.insert("MOTION_BLOCKING", Tag::List(vec![]));
 
                 map
             }),
             data: vec![],
             block_entities: vec![],
-            sky_light_mask: BitSet::empty(),
-            block_light_mask: BitSet::empty(),
-            empty_sky_light_mask: BitSet::empty(),
-            empty_block_light_mask: BitSet::empty(),
+            sky_light_mask: BitSet::new(1),
+            block_light_mask: BitSet::new(1),
+            empty_sky_light_mask: BitSet::new(1),
+            empty_block_light_mask: BitSet::new(1),
             sky_lights: vec![],
             block_lights: vec![],
         }
@@ -79,6 +78,33 @@ impl Default for SetDefaultSpawnPosition {
         Self {
             angle: 0f32,
             location: Position::new(0.0, 0.0, 0.0),
+        }
+    }
+}
+
+//
+#[derive(Streamable)]
+#[packet_id(0x3E)]
+pub struct SynchronizePlayerPosition {
+    x: f64,
+    y: f64,
+    z: f64,
+    yaw: f32,
+    pitch: f32,
+    flags: u8,
+    teleport_id: VarInt,
+}
+
+impl Default for SynchronizePlayerPosition {
+    fn default() -> Self {
+        Self {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            yaw: 0.0,
+            pitch: 0.0,
+            flags: 255,
+            teleport_id: VarInt(0),
         }
     }
 }
