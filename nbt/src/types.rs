@@ -222,3 +222,33 @@ impl<R: Read> NbtReader for R {
         })
     }
 }
+
+// pub trait ToNbt {
+//     fn to_nbt(&self) {}
+// }
+
+// impl<T> ToNbt for Vec<T> {
+//     fn to_nbt(&self) {}
+// }
+
+// impl ToNbt for &str {
+//     fn to_nbt(&self) {}
+// }
+
+// pub struct NamedBinaryTag<S, T> {
+//     title: String,
+//     content: Vec<(S, T)>,
+// }
+
+// impl<S, T> NamedBinaryTag<S, T>
+// where
+//     S: Into<String>,
+//     T: ToNbt,
+// {
+//     fn new(title: S, content: Vec<(S, T)>) -> Self {
+//         Self {
+//             title: title.into(),
+//             content,
+//         }
+//     }
+// }
