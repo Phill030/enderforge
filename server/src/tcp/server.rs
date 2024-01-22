@@ -78,12 +78,23 @@ impl TcpServer {
                         // ReceiveFinishConfiguration::receive(&mut cursor).unwrap();
                         // println!("[Config] Finishing configuration");
                     }
+                    // Player Position
                     0x17 => {
                         let x = cursor.read_f64::<BigEndian>().unwrap();
                         let y = cursor.read_f64::<BigEndian>().unwrap();
                         let z = cursor.read_f64::<BigEndian>().unwrap();
                         let on_ground = cursor.read_bool().unwrap();
                         println!("{x},{y},{z} [{on_ground}]");
+                    }
+                    // Player Position and rotation
+                    0x18 => {
+                        let x = cursor.read_f64::<BigEndian>().unwrap();
+                        let y = cursor.read_f64::<BigEndian>().unwrap();
+                        let z = cursor.read_f64::<BigEndian>().unwrap();
+                        let yaw = cursor.read_f32::<BigEndian>().unwrap();
+                        let pitch = cursor.read_f32::<BigEndian>().unwrap();
+                        let on_ground = cursor.read_bool().unwrap();
+                        println!("{x},{y},{z} | {yaw} | {pitch} | [{on_ground}]");
                     }
                     _ => {
                         println!("len_{len} packetId_{packet_id}");
