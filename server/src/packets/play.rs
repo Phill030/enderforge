@@ -64,7 +64,7 @@ impl Default for PlayLogin {
             game_mode: 1,
             previous_game_mode: -1,
             is_debug: true,
-            is_flat: true,
+            is_flat: false,
             death: None,
             portal_cooldown: VarInt(0),
         }
