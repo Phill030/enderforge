@@ -1,3 +1,5 @@
+use byteorder::{BigEndian, ReadBytesExt};
+
 use crate::decoder::DecoderReadExt;
 use crate::packets::login::LoginAcknowledge;
 use crate::packets::{handshake::HandShake, login::Login, status::Status};
@@ -75,6 +77,13 @@ impl TcpServer {
                     0x02 => {
                         // ReceiveFinishConfiguration::receive(&mut cursor).unwrap();
                         // println!("[Config] Finishing configuration");
+                    }
+                    0x17 => {
+                        let x = cursor.read_f64::<BigEndian>().unwrap();
+                        let y = cursor.read_f64::<BigEndian>().unwrap();
+                        let z = cursor.read_f64::<BigEndian>().unwrap();
+                        let on_ground = cursor.read_bool().unwrap();
+                        println!("{x},{y},{z} [{on_ground}]");
                     }
                     _ => {
                         println!("len_{len} packetId_{packet_id}");
