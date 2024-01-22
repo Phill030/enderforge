@@ -7,11 +7,7 @@ use crate::packets::config::{FinishConfiguration, RegistryData};
 use crate::packets::play::PlayLogin;
 use crate::tcp::server::GameplayState;
 use crate::types::VarInt;
-use crate::utils::prepare_response;
 use macros::{Receivable, Serializable, Streamable};
-use nbt::io::Nbt;
-use std::fs::File;
-use std::io::Read;
 use std::ops::Add;
 use std::{
     io::{Cursor, Write},
