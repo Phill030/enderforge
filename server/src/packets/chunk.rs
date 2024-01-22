@@ -40,6 +40,7 @@ pub struct Light {
     sky_light_array: [u8; 2048],
 }
 
+// https://wiki.vg/Chunk_Format
 impl Default for ChunkDataUpdateLight {
     fn default() -> Self {
         Self {
@@ -63,9 +64,6 @@ impl Default for ChunkDataUpdateLight {
     }
 }
 
-// https://wiki.vg/Chunk_Format
-
-//
 #[derive(Streamable)]
 #[packet_id(0x54)]
 pub struct SetDefaultSpawnPosition {
@@ -82,7 +80,6 @@ impl Default for SetDefaultSpawnPosition {
     }
 }
 
-//
 #[derive(Streamable)]
 #[packet_id(0x3E)]
 pub struct SynchronizePlayerPosition {
@@ -98,9 +95,9 @@ pub struct SynchronizePlayerPosition {
 impl Default for SynchronizePlayerPosition {
     fn default() -> Self {
         Self {
-            x: 0.0,
+            x: 123.0,
             y: 0.0,
-            z: 0.0,
+            z: 456.0,
             yaw: 0.0,
             pitch: 0.0,
             flags: 255,
