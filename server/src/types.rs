@@ -84,19 +84,19 @@ impl Position {
 impl From<u64> for Position {
     fn from(value: u64) -> Self {
         let mut x: f32 = (value >> 38) as f32;
-        let mut z: f32 = (value << 52 >> 52) as f32;
-        let mut y: f32 = (value << 26 >> 38) as f32;
+        let mut y: f32 = (value << 52 >> 52) as f32;
+        let mut z: f32 = (value << 26 >> 38) as f32;
 
         if x >= (1u64 << 25u64) as f32 {
             x -= (1 << 26) as f32;
         }
 
-        if z >= (1u64 << 25u64) as f32 {
-            z -= (1 << 26) as f32;
-        }
-
         if y >= (1u64 << 11u64) as f32 {
             y -= (1 << 12) as f32;
+        }
+
+        if z >= (1u64 << 25u64) as f32 {
+            z -= (1 << 26) as f32;
         }
 
         Self { x, z, y }
