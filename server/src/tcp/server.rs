@@ -1,5 +1,4 @@
-use crate::decoder::{DecoderReadExt, ReceiveFromStream};
-use crate::packets::config::{ClientInformation, ReceiveFinishConfiguration, ServerboundPluginMessage};
+use crate::decoder::DecoderReadExt;
 use crate::packets::login::LoginAcknowledge;
 use crate::packets::{handshake::HandShake, login::Login, status::Status};
 use std::{
