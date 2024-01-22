@@ -95,12 +95,12 @@ pub struct SynchronizePlayerPosition {
 impl Default for SynchronizePlayerPosition {
     fn default() -> Self {
         Self {
-            x: 123.0,
-            y: 0.0,
-            z: 456.0,
+            x: 0.0,
+            y: 500.0,
+            z: 0.0,
             yaw: 0.0,
             pitch: 0.0,
-            flags: 255,
+            flags: 0,
             teleport_id: VarInt(0),
         }
     }
