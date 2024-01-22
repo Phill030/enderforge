@@ -2,8 +2,9 @@ use crate::decoder::{Decoder, ReceiveFromStream};
 use crate::encoder::EncoderWriteExt;
 use crate::encoder::{Encoder, SendToStream};
 use crate::errors::EncodeError;
-use crate::packets::chunk::{ChunkDataUpdateLight, SetDefaultSpawnPosition, SynchronizePlayerPosition};
+use crate::packets::chunk::{ChunkDataUpdateLight, SynchronizePlayerPosition};
 use crate::packets::config::{FinishConfiguration, RegistryData};
+use crate::packets::event::GameEvent;
 use crate::packets::play::PlayLogin;
 use crate::tcp::server::GameplayState;
 use crate::types::VarInt;
@@ -34,12 +35,10 @@ impl LoginAcknowledge {
         FinishConfiguration::default().send(stream).unwrap();
 
         PlayLogin::default().send(stream).unwrap();
-        std::thread::sleep(std::time::Duration::from_secs(1));
         ChunkDataUpdateLight::default().send(stream).unwrap();
-        std::thread::sleep(std::time::Duration::from_secs(1));
         SynchronizePlayerPosition::default().send(stream).unwrap();
-        std::thread::sleep(std::time::Duration::from_secs(1));
-        SetDefaultSpawnPosition::default().send(stream).unwrap();
+        GameEvent::default().send(stream).unwrap();
+        // SetDefaultSpawnPosition::default().send(stream).unwrap();
         *state = GameplayState::Play;
     }
 }
