@@ -38,7 +38,7 @@ pub struct RegistryData {
 
 impl Default for RegistryData {
     fn default() -> Self {
-        let mut f = File::open(r"D:\Phill030.de\Rust\mc_protocol\dimension_codec.nbt").unwrap();
+        let mut f = File::open(r"./dimension_codec.nbt").unwrap();
         let mut buffer = vec![];
         f.read_to_end(&mut buffer).unwrap();
         let mut cursor = Cursor::new(buffer);
