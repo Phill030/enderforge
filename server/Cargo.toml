@@ -13,3 +13,4 @@ serde_json = "1.0.111"
 macros = { path = "../macros" }
 nbt = { path = "../nbt" }
 fastnbt = "2.4.4"
+rand = { version = "0.8.5", features = ["std_rng"] }

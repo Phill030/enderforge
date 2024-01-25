@@ -423,6 +423,7 @@ dependencies = [
  "fastnbt",
  "macros",
  "nbt",
+ "rand",
  "serde",
  "serde_json",
  "thiserror",
