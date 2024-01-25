@@ -2,14 +2,13 @@ use crate::decoder::{Decoder, ReceiveFromStream};
 use crate::encoder::EncoderWriteExt;
 use crate::encoder::{Encoder, SendToStream};
 use crate::errors::EncodeError;
-use crate::packets::chunk::{ChunkDataUpdateLight, SynchronizePlayerPosition};
 use crate::packets::config::{FinishConfiguration, RegistryData};
-use crate::packets::event::GameEvent;
-use crate::packets::play::PlayLogin;
+use crate::player::mc_player::McPlayer;
 use crate::tcp::server::GameplayState;
 use crate::types::VarInt;
 use macros::{Receivable, Serializable, Streamable};
 use std::ops::Add;
+use std::sync::{Arc, Mutex};
 use std::{
     io::{Cursor, Write},
     net::TcpStream,
@@ -27,19 +26,12 @@ pub struct LoginStart {
 pub struct LoginAcknowledge {}
 
 impl LoginAcknowledge {
-    pub fn handle(state: &mut GameplayState, stream: &mut TcpStream) {
+    pub fn handle(stream: &mut TcpStream, gameplay_state: &mut GameplayState) {
         println!("[LoginAck] Received");
+        *gameplay_state = GameplayState::Play;
 
-        // TODO Refactor to make this inside the Play GameplayState ?
         RegistryData::default().send(stream).unwrap();
         FinishConfiguration::default().send(stream).unwrap();
-
-        PlayLogin::default().send(stream).unwrap();
-        ChunkDataUpdateLight::default().send(stream).unwrap();
-        SynchronizePlayerPosition::default().send(stream).unwrap();
-        GameEvent::default().send(stream).unwrap();
-        // SetDefaultSpawnPosition::default().send(stream).unwrap();
-        *state = GameplayState::Play;
     }
 }
 
@@ -71,14 +63,24 @@ impl LoginSuccess {
 
 pub struct Login;
 impl Login {
-    pub fn handle(cursor: &mut Cursor<Vec<u8>>, state: &mut GameplayState, stream: &mut TcpStream) {
+    pub fn handle(cursor: &mut Cursor<Vec<u8>>, players: Arc<Mutex<Vec<McPlayer>>>, state: &mut GameplayState, stream: &mut TcpStream) {
         let login_start = LoginStart::receive(cursor).unwrap();
         println!("[Login] Username: {} | UUID: {}", login_start.username, login_start.uuid);
 
-        let uuid_val = String::from("OfflinePlayer:").add(&login_start.username);
-        LoginSuccess::new(Uuid::new_v3(&Uuid::NAMESPACE_URL, uuid_val.as_bytes()), login_start.username)
-            .send(stream)
-            .unwrap();
+        let uuid = Uuid::new_v3(
+            &Uuid::NAMESPACE_URL,
+            String::from("OfflinePlayer:").add(&login_start.username).as_bytes(),
+        );
+        LoginSuccess::new(uuid, login_start.username.clone()).send(stream).unwrap();
+
+        if let Ok(mut players) = players.clone().lock() {
+            // TODO: There are 2 different KeepAlives! 1x for Configuration and 1x while Playing, and KeepAlive should only be sent for authorized users (valid uuid)
+            players.push(McPlayer {
+                stream: stream.try_clone().unwrap(),
+                username: login_start.username,
+                uuid,
+            });
+        }
 
         *state = GameplayState::LoginAcknowledge;
     }
