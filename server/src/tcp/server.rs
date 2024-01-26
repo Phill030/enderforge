@@ -1,21 +1,23 @@
 use crate::decoder::{DecoderReadExt, ReceiveFromStream};
-use crate::encoder::Encoder;
 use crate::encoder::SendToStream;
 use crate::packets::chunk::{ChunkDataUpdateLight, SetDefaultSpawnPosition, SynchronizePlayerPosition};
 use crate::packets::config::{ClientInformation, ReceiveFinishConfiguration, ServerboundPluginMessage};
 use crate::packets::event::GameEvent;
+use crate::packets::incoming::handshake::HandShake;
+use crate::packets::incoming::keep_alive_response::KeepAliveResponse;
+use crate::packets::incoming::player_position::PlayerPosition;
+use crate::packets::incoming::player_position_rotation::PlayerPositionRotation;
+use crate::packets::incoming::player_rotation::PlayerRotation;
 use crate::packets::login::LoginAcknowledge;
 use crate::packets::outgoing::keep_alive::KeepAlive;
 use crate::packets::play::PlayLogin;
-use crate::packets::{handshake::HandShake, login::Login, status::Status};
+use crate::packets::{login::Login, status::Status};
 use crate::player::mc_player::McPlayer;
-use byteorder::{BigEndian, ReadBytesExt};
-use macros::Streamable;
-use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use futures::future::join;
+use std::time::{SystemTime, UNIX_EPOCH};
 use std::{
     fmt::Debug,
-    io::{Cursor, Read, Write},
+    io::{Cursor, Read},
     net::{TcpListener, TcpStream, ToSocketAddrs},
     sync::{Arc, Mutex},
     time::Duration,
@@ -59,7 +61,25 @@ impl TcpServer {
 
             match stream {
                 Ok(stream) => {
-                    task::spawn(async move { Self::handle_connection(players.clone(), stream).await });
+                    let mut cloned_stream = stream.try_clone()?;
+
+                    let connection_task = task::spawn(async move { Self::handle_connection(players.clone(), stream) });
+                    let keep_alive_task = task::spawn(async move {
+                        println!("Starting KeepAlive thread...");
+
+                        let mut interval_timer = time::interval(Duration::from_secs(15));
+                        interval_timer.tick().await;
+
+                        loop {
+                            interval_timer.tick().await;
+                            println!("[KeepAlive] sending to player...");
+                            KeepAlive::new(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64)
+                                .send(&mut cloned_stream)
+                                .unwrap();
+                        }
+                    });
+
+                    join(connection_task, keep_alive_task).await;
                 }
                 Err(_) => {
                     eprintln!("There was an error while accepting the incoming connection!");
@@ -70,7 +90,7 @@ impl TcpServer {
         Ok(())
     }
 
-    async fn handle_connection(players: Arc<Mutex<Vec<McPlayer>>>, mut stream: TcpStream) {
+    fn handle_connection(players: Arc<Mutex<Vec<McPlayer>>>, mut stream: TcpStream) {
         println!("{} connected", stream.peer_addr().unwrap());
         let mut gameplay_state = GameplayState::None;
         let mut ingame_state = IngameState::Config;
@@ -92,27 +112,7 @@ impl TcpServer {
             match gameplay_state {
                 GameplayState::None => HandShake::handle(&mut cursor, &mut gameplay_state, &mut stream),
                 GameplayState::Status => Status::handle(&mut stream),
-                GameplayState::Login => {
-                    let mut cloned_stream = stream.try_clone().unwrap();
-                    Login::handle(&mut cursor, players.clone(), &mut gameplay_state, &mut stream);
-
-                    task::spawn(async move {
-                        let mut rng = StdRng::from_entropy();
-                        println!("Starting KeepAlive thread...");
-
-                        let mut interval_timer = time::interval(Duration::from_secs(15));
-                        interval_timer.tick().await;
-
-                        while len > 0 {
-                            interval_timer.tick().await;
-                            println!("[KeepAlive] sending to player...");
-                            KeepAlive::new(rng.gen::<i64>()).send(&mut cloned_stream).unwrap();
-                        }
-
-                        println!("Terminating KeepAlive thread");
-                    });
-                    // awaiting it makes the thread block itself
-                }
+                GameplayState::Login => Login::handle(&mut cursor, players.clone(), &mut gameplay_state, &mut stream),
                 GameplayState::LoginAcknowledge => LoginAcknowledge::handle(&mut stream, &mut gameplay_state),
                 GameplayState::Play => match ingame_state {
                     IngameState::Config => match packet_id {
@@ -141,31 +141,33 @@ impl TcpServer {
                         }
                     },
                     IngameState::Playing => match packet_id {
+                        // KeepAlive Response
+                        0x15 => {
+                            let res = KeepAliveResponse::receive(&mut cursor).unwrap();
+                            println!("KeepAlive response: {}", res.id);
+                        }
+
                         // Player Position
                         0x17 => {
-                            let x = cursor.read_f64::<BigEndian>().unwrap();
-                            let y = cursor.read_f64::<BigEndian>().unwrap();
-                            let z = cursor.read_f64::<BigEndian>().unwrap();
-                            let on_ground = cursor.read_bool().unwrap();
-                            println!("{x},{y},{z} [{on_ground}]");
+                            let pos = PlayerPosition::receive(&mut cursor).unwrap();
+                            println!("{},{},{} [{}]", pos.x, pos.y, pos.z, pos.on_ground);
                         }
+
                         // Player Position and rotation
                         0x18 => {
-                            let x = cursor.read_f64::<BigEndian>().unwrap();
-                            let y = cursor.read_f64::<BigEndian>().unwrap();
-                            let z = cursor.read_f64::<BigEndian>().unwrap();
-                            let yaw = cursor.read_f32::<BigEndian>().unwrap();
-                            let pitch = cursor.read_f32::<BigEndian>().unwrap();
-                            let on_ground = cursor.read_bool().unwrap();
-                            println!("{x},{y},{z} | {yaw} | {pitch} | [{on_ground}]");
+                            let pos_rot = PlayerPositionRotation::receive(&mut cursor).unwrap();
+                            println!(
+                                "{},{},{} | {} | {} | [{}]",
+                                pos_rot.x, pos_rot.y, pos_rot.z, pos_rot.yaw, pos_rot.pitch, pos_rot.on_ground
+                            );
                         }
+
                         // Player rotation
                         0x19 => {
-                            let yaw = cursor.read_f32::<BigEndian>().unwrap();
-                            let pitch = cursor.read_f32::<BigEndian>().unwrap();
-                            let on_ground = cursor.read_bool().unwrap();
-                            println!("{yaw} | {pitch} | [{on_ground}]");
+                            let rot = PlayerRotation::receive(&mut cursor).unwrap();
+                            println!("{} | {} | [{}]", rot.yaw, rot.pitch, rot.on_ground);
                         }
+
                         _ => {
                             println!("len_{len} packetId_{packet_id}");
                             println!("{}", String::from_utf8_lossy(&cursor.into_inner()).to_string())
