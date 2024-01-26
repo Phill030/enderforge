@@ -1,7 +1,6 @@
 pub mod chunk;
 pub mod config;
 pub mod event;
-pub mod handshake;
 pub mod incoming;
 pub mod ingame_packets;
 pub mod login;
