@@ -2,7 +2,7 @@ use std::net::TcpStream;
 use uuid::Uuid;
 
 pub trait Player {
-    fn disconnect(reason: String) -> bool;
+    fn disconnect(&self, reason: String) -> bool;
 }
 
 pub struct McPlayer {
@@ -12,7 +12,7 @@ pub struct McPlayer {
 }
 
 impl Player for McPlayer {
-    fn disconnect(reason: String) -> bool {
+    fn disconnect(&self, reason: String) -> bool {
         todo!()
     }
 }
