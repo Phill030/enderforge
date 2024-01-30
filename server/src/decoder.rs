@@ -1,7 +1,6 @@
 use crate::{
     errors::DecodeError,
     types::{ByteArray, Position, VarInt, VarLong},
-    utils::MAX_STRING_LEN,
 };
 use byteorder::{BigEndian, ReadBytesExt};
 use std::io::{Cursor, Read};
@@ -103,28 +102,28 @@ impl Decoder for bool {
     }
 }
 
-impl Decoder for Vec<u8> {
-    type Output = Self;
+// impl Decoder for Vec<u8> {
+//     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        reader.read_byte_array()
-    }
-}
+//     fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+//         reader.read_byte_array()
+//     }
+// }
 
-impl Decoder for Vec<String> {
-    type Output = Self;
+// impl Decoder for Vec<String> {
+//     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        let len = reader.read_var_i32()?;
-        let mut buffer: Vec<String> = vec![];
+//     fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+//         let len = reader.read_var_i32()?;
+//         let mut buffer: Vec<String> = vec![0; len as usize];
 
-        for _ in 0..len {
-            buffer.push(reader.read_string(MAX_STRING_LEN)?);
-        }
+//         for _ in 0..len {
+//             buffer.push(reader.read_string(MAX_STRING_LEN)?);
+//         }
 
-        Ok(buffer)
-    }
-}
+//         Ok(buffer)
+//     }
+// }
 
 impl Decoder for Uuid {
     type Output = Self;
@@ -211,6 +210,21 @@ impl Decoder for ByteArray {
 
     fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
         Ok(ByteArray::from(reader.read_byte_array()?))
+    }
+}
+
+impl<T: Decoder<Output = T>> Decoder for Vec<T> {
+    type Output = Self;
+
+    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        let len = reader.read_var_i32()?;
+        let mut x_vec: Vec<T> = Vec::with_capacity(len as usize);
+
+        for _ in 0..len {
+            x_vec.push(T::decode(reader)?);
+        }
+
+        Ok(x_vec)
     }
 }
 
