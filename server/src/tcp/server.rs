@@ -1,26 +1,29 @@
 use crate::decoder::{DecoderReadExt, ReceiveFromStream};
 use crate::encoder::SendToStream;
-use crate::packets::chunk::{ChunkDataUpdateLight, SetDefaultSpawnPosition, SynchronizePlayerPosition};
-use crate::packets::config::{ClientInformation, ReceiveFinishConfiguration, ServerboundPluginMessage};
-use crate::packets::event::GameEvent;
-use crate::packets::incoming::handshake::HandShake;
-use crate::packets::incoming::keep_alive_response::KeepAliveResponse;
-use crate::packets::incoming::player_position::PlayerPosition;
-use crate::packets::incoming::player_position_rotation::PlayerPositionRotation;
-use crate::packets::incoming::player_rotation::PlayerRotation;
-use crate::packets::login::LoginAcknowledge;
-use crate::packets::outgoing::keep_alive::KeepAlive;
-use crate::packets::play::PlayLogin;
-use crate::packets::{login::Login, status::Status};
-use crate::player::mc_player::McPlayer;
+use crate::packets::outgoing::play_disconnect::Disconnect;
+use crate::{
+    packets::{
+        chunk::{ChunkDataUpdateLight, SetDefaultSpawnPosition, SynchronizePlayerPosition},
+        config::{ClientInformation, ReceiveFinishConfiguration, ServerboundPluginMessage},
+        event::GameEvent,
+        incoming::{
+            handshake::HandShake, keep_alive_response::KeepAliveResponse, player_position::PlayerPosition,
+            player_position_rotation::PlayerPositionRotation, player_rotation::PlayerRotation,
+        },
+        login::{Login, LoginAcknowledge},
+        outgoing::keep_alive::KeepAlive,
+        play::PlayLogin,
+        status::Status,
+    },
+    player::mc_player::McPlayer,
+};
 use futures::future::join;
-use std::time::{SystemTime, UNIX_EPOCH};
 use std::{
     fmt::Debug,
     io::{Cursor, Read},
     net::{TcpListener, TcpStream, ToSocketAddrs},
     sync::{Arc, Mutex},
-    time::Duration,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::{task, time};
 
@@ -38,11 +41,15 @@ pub enum IngameState {
     Playing,
 }
 
-pub struct TcpServer {
+pub trait Server {}
+
+pub struct McServer {
     players: Arc<Mutex<Vec<McPlayer>>>,
 }
 
-impl TcpServer {
+impl Server for McServer {}
+
+impl McServer {
     pub fn new() -> Self {
         Self {
             players: Arc::new(Mutex::new(vec![])),
@@ -63,21 +70,8 @@ impl TcpServer {
                 Ok(stream) => {
                     let mut cloned_stream = stream.try_clone()?;
 
-                    let connection_task = task::spawn(async move { Self::handle_connection(players.clone(), stream) });
-                    let keep_alive_task = task::spawn(async move {
-                        println!("Starting KeepAlive thread...");
-
-                        let mut interval_timer = time::interval(Duration::from_secs(15));
-                        interval_timer.tick().await;
-
-                        loop {
-                            interval_timer.tick().await;
-                            println!("[KeepAlive] sending to player...");
-                            KeepAlive::new(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64)
-                                .send(&mut cloned_stream)
-                                .unwrap();
-                        }
-                    });
+                    let connection_task = task::spawn(Self::handle_connection(players.clone(), stream));
+                    let keep_alive_task = task::spawn(Self::handle_keep_alive(cloned_stream));
 
                     join(connection_task, keep_alive_task).await;
                 }
@@ -90,7 +84,22 @@ impl TcpServer {
         Ok(())
     }
 
-    fn handle_connection(players: Arc<Mutex<Vec<McPlayer>>>, mut stream: TcpStream) {
+    async fn handle_keep_alive(mut stream: TcpStream) {
+        println!("Starting KeepAlive thread...");
+
+        let mut interval_timer = time::interval(Duration::from_secs(15));
+        interval_timer.tick().await;
+
+        loop {
+            interval_timer.tick().await;
+            println!("[KeepAlive] sending to player...");
+            KeepAlive::new(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64)
+                .send(&mut stream)
+                .unwrap();
+        }
+    }
+
+    async fn handle_connection(players: Arc<Mutex<Vec<McPlayer>>>, mut stream: TcpStream) {
         println!("{} connected", stream.peer_addr().unwrap());
         let mut gameplay_state = GameplayState::None;
         let mut ingame_state = IngameState::Config;
@@ -134,6 +143,8 @@ impl TcpServer {
                             SynchronizePlayerPosition::default().send(&mut stream).unwrap();
                             GameEvent::default().send(&mut stream).unwrap();
                             SetDefaultSpawnPosition::default().send(&mut stream).unwrap();
+
+                            Disconnect::default().send(&mut stream).unwrap();
                         }
                         _ => {
                             println!("len_{len} packetId_{packet_id}");
