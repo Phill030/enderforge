@@ -217,7 +217,6 @@ impl Encoder for Position {
     }
 }
 
-// TODO: Replace u8 with T
 // TODO: Decoder for [u8; N]
 impl<const N: usize> Encoder for [u8; N]
 where
