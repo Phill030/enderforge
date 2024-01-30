@@ -1,4 +1,4 @@
-use tcp::server::TcpServer;
+use tcp::server::McServer;
 
 pub mod decoder;
 pub mod encoder;
@@ -11,7 +11,7 @@ pub mod utils;
 
 #[tokio::main]
 async fn main() {
-    TcpServer::new().start(&"0.0.0.0:25565").await.unwrap();
+    McServer::new().start(&"0.0.0.0:25565").await.unwrap();
 }
 
 // https://github.com/Sweattypalms/ferrumc/blob/master/crates/ferrumc_net/src/login_start.rs
