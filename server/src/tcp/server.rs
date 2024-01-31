@@ -1,6 +1,5 @@
 use crate::decoder::{DecoderReadExt, ReceiveFromStream};
 use crate::encoder::SendToStream;
-use crate::packets::outgoing::play_disconnect::Disconnect;
 use crate::{
     packets::{
         chunk::{ChunkDataUpdateLight, SetDefaultSpawnPosition, SynchronizePlayerPosition},
@@ -11,7 +10,7 @@ use crate::{
             player_position_rotation::PlayerPositionRotation, player_rotation::PlayerRotation,
         },
         login::{Login, LoginAcknowledge},
-        outgoing::keep_alive::KeepAlive,
+        outgoing::{keep_alive::KeepAlive, play_disconnect::PlayDisconnect},
         play::PlayLogin,
         status::Status,
     },
@@ -26,6 +25,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::{task, time};
+use uuid::Uuid;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub enum GameplayState {
@@ -41,13 +41,39 @@ pub enum IngameState {
     Playing,
 }
 
-pub trait Server {}
+pub trait Server {
+    type Player;
+
+    fn get_player_by_uuid(&self, uuid: &Uuid) -> Option<Self::Player>;
+    fn get_player_by_name(&self, name: String) -> Option<Self::Player>;
+}
 
 pub struct McServer {
     players: Arc<Mutex<Vec<McPlayer>>>,
 }
 
-impl Server for McServer {}
+impl Server for McServer {
+    type Player = McPlayer;
+
+    fn get_player_by_uuid(&self, uuid: &Uuid) -> Option<Self::Player> {
+        if let Ok(players) = self.players.lock() {
+            if let Some(player) = players.iter().find(|p| p.uuid.eq(uuid)) {
+                return Some(player.clone());
+            }
+        }
+        None
+    }
+
+    fn get_player_by_name(&self, name: String) -> Option<Self::Player> {
+        if let Ok(players) = self.players.lock() {
+            if let Some(player) = players.iter().find(|p| p.username.eq(&name)) {
+                return Some(player.clone());
+            }
+        }
+
+        None
+    }
+}
 
 impl McServer {
     pub fn new() -> Self {
@@ -68,7 +94,7 @@ impl McServer {
 
             match stream {
                 Ok(stream) => {
-                    let mut cloned_stream = stream.try_clone()?;
+                    let cloned_stream = stream.try_clone()?;
 
                     let connection_task = task::spawn(Self::handle_connection(players.clone(), stream));
                     let keep_alive_task = task::spawn(Self::handle_keep_alive(cloned_stream));
@@ -144,7 +170,7 @@ impl McServer {
                             GameEvent::default().send(&mut stream).unwrap();
                             SetDefaultSpawnPosition::default().send(&mut stream).unwrap();
 
-                            Disconnect::default().send(&mut stream).unwrap();
+                            // PlayDisconnect::from_text("Test message...").send(&mut stream).unwrap();
                         }
                         _ => {
                             println!("len_{len} packetId_{packet_id}");
