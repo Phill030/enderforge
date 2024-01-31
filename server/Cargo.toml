@@ -8,8 +8,8 @@ tokio = { version = "1.35.1", features = ["full"] }
 thiserror = "1.0.56"
 uuid = { version = "1.7.0", features = ["v4", "fast-rng", "v3"] }
 byteorder = "1.5.0"
-serde = { version = "1.0.195", features = ["derive"] }
-serde_json = "1.0.111"
+serde = { version = "1.0.196", features = ["derive"] }
+serde_json = "1.0.113"
 macros = { path = "../macros" }
 nbt = { path = "../nbt" }
 fastnbt = "2.4.4"
