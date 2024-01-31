@@ -2,7 +2,6 @@ pub mod chunk;
 pub mod config;
 pub mod event;
 pub mod incoming;
-pub mod ingame_packets;
 pub mod login;
 pub mod outgoing;
 pub mod play;
