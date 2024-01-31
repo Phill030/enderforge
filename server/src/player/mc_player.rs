@@ -1,8 +1,12 @@
-use std::net::TcpStream;
+use crate::{encoder::SendToStream, packets::outgoing::play_disconnect::PlayDisconnect};
+use std::net::{Shutdown, TcpStream};
 use uuid::Uuid;
 
 pub trait Player {
-    fn disconnect(&self, reason: String) -> bool;
+    fn disconnect<S>(&mut self, reason: S)
+    where
+        S: Into<String>,
+        Self: Sized;
 }
 
 pub struct McPlayer {
@@ -12,7 +16,22 @@ pub struct McPlayer {
 }
 
 impl Player for McPlayer {
-    fn disconnect(&self, reason: String) -> bool {
-        todo!()
+    fn disconnect<S>(&mut self, reason: S)
+    where
+        S: Into<String>,
+    {
+        if let Ok(_) = PlayDisconnect::from_text(reason.into()).send(&mut self.stream) {
+            self.stream.shutdown(Shutdown::Both).unwrap();
+        }
+    }
+}
+
+impl Clone for McPlayer {
+    fn clone(&self) -> Self {
+        Self {
+            stream: self.stream.try_clone().unwrap(),
+            username: self.username.clone(),
+            uuid: self.uuid.clone(),
+        }
     }
 }
