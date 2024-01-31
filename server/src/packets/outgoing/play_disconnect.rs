@@ -5,16 +5,19 @@ use std::{collections::HashMap, io::Write};
 
 #[derive(Streamable)]
 #[packet_id(0x1B)]
-pub struct Disconnect {
-    reason: Nbt, // TODO
+pub struct PlayDisconnect {
+    reason: Nbt,
 }
 
-impl Default for Disconnect {
-    fn default() -> Self {
+impl PlayDisconnect {
+    pub fn from_text<S>(message: S) -> Self
+    where
+        S: Into<String>,
+    {
         Self {
             reason: Nbt::new("", {
                 let mut map = HashMap::new();
-                map.insert("test", Tag::String("text".to_string()));
+                map.insert("text", Tag::String(message.into()));
 
                 map
             }),
