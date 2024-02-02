@@ -1,5 +1,6 @@
 use crate::decoder::{DecoderReadExt, ReceiveFromStream};
 use crate::encoder::SendToStream;
+use crate::packets::outgoing::play_disconnect::PlayDisconnect;
 use crate::{
     packets::{
         chunk::{ChunkDataUpdateLight, SetDefaultSpawnPosition, SynchronizePlayerPosition},
@@ -10,7 +11,7 @@ use crate::{
             player_position_rotation::PlayerPositionRotation, player_rotation::PlayerRotation,
         },
         login::{Login, LoginAcknowledge},
-        outgoing::{keep_alive::KeepAlive, play_disconnect::PlayDisconnect},
+        outgoing::keep_alive::KeepAlive,
         play::PlayLogin,
         status::Status,
     },
@@ -169,8 +170,6 @@ impl McServer {
                             SynchronizePlayerPosition::default().send(&mut stream).unwrap();
                             GameEvent::default().send(&mut stream).unwrap();
                             SetDefaultSpawnPosition::default().send(&mut stream).unwrap();
-
-                            // PlayDisconnect::from_text("Test message...").send(&mut stream).unwrap();
                         }
                         _ => {
                             println!("len_{len} packetId_{packet_id}");
@@ -178,6 +177,14 @@ impl McServer {
                         }
                     },
                     IngameState::Playing => match packet_id {
+                        // Chat Message
+                        0x05 => {
+                            let message = cursor.read_string(256).unwrap();
+                            PlayDisconnect::from_text(format!("{}", message.repeat(50)))
+                                .send(&mut stream)
+                                .unwrap();
+                        }
+
                         // KeepAlive Response
                         0x15 => {
                             let res = KeepAliveResponse::receive(&mut cursor).unwrap();
