@@ -123,7 +123,7 @@ pub fn derive_receivable(input: TokenStream) -> TokenStream {
                     let field_type = &field.ty;
 
                     quote! {
-                        #field_name: #field_type::decode(cursor)?,
+                        #field_name: <#field_type>::decode(cursor)?,
                     }
                 });
 
