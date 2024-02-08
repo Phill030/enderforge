@@ -1,9 +1,12 @@
 use crate::{
     errors::DecodeError,
-    types::{ByteArray, Position, VarInt, VarLong},
+    types::{BitSet, Position, VarInt, VarLong},
 };
 use byteorder::{BigEndian, ReadBytesExt};
-use std::io::{Cursor, Read};
+use std::{
+    io::{Cursor, Read},
+    mem::size_of,
+};
 use uuid::Uuid;
 
 static SEGMENT_BITS: u8 = 0x7F;
@@ -205,11 +208,24 @@ impl Decoder for Position {
     }
 }
 
-impl Decoder for ByteArray {
+// TODO: Test this like wtf is this shit???
+impl Decoder for BitSet {
     type Output = Self;
 
     fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        Ok(ByteArray::from(reader.read_byte_array()?))
+        let bits = reader.read_byte_array()?;
+        let chunks = bits
+            .chunks_exact(8)
+            .map(|chunk| {
+                let mut value = 0_i64;
+                for (i, &byte) in chunk.iter().enumerate() {
+                    value |= (byte as i64) << (i * 8);
+                }
+                value
+            })
+            .collect();
+
+        Ok(Self(chunks))
     }
 }
 
