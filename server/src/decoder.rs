@@ -3,10 +3,7 @@ use crate::{
     types::{BitSet, Position, VarInt, VarLong},
 };
 use byteorder::{BigEndian, ReadBytesExt};
-use std::{
-    io::{Cursor, Read},
-    mem::size_of,
-};
+use std::io::{Cursor, Read};
 use uuid::Uuid;
 
 static SEGMENT_BITS: u8 = 0x7F;
