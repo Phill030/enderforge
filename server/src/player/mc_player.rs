@@ -6,7 +6,7 @@ use std::{
 use uuid::Uuid;
 
 pub trait Player {
-    fn disconnect<S>(&mut self, reason: S) -> io::Result<()>
+    fn disconnect<S>(&mut self, reason: S) -> io::Result<bool>
     where
         S: Into<String>,
         Self: Sized;
@@ -19,15 +19,16 @@ pub struct McPlayer {
 }
 
 impl Player for McPlayer {
-    fn disconnect<S>(&mut self, reason: S) -> io::Result<()>
+    fn disconnect<S>(&mut self, reason: S) -> io::Result<bool>
     where
         S: Into<String>,
     {
         if let Ok(_) = PlayDisconnect::from_text(reason.into()).send(&mut self.stream) {
-            return Ok(self.stream.shutdown(Shutdown::Both)?);
+            self.stream.shutdown(Shutdown::Both)?;
+            return Ok(true);
         }
 
-        Ok(())
+        Ok(false)
     }
 }
 

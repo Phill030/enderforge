@@ -19,6 +19,7 @@ use crate::{
     player::mc_player::McPlayer,
 };
 use futures::future::join;
+use std::io;
 use std::{
     fmt::Debug,
     io::{Cursor, Read},
@@ -56,7 +57,7 @@ pub trait Server {
     fn get_player_by_uuid(&self, uuid: &Uuid) -> Option<Self::Player>;
     fn get_player_by_name(&self, name: String) -> Option<Self::Player>;
 
-    fn disconnect_player<S>(&self, identifier: Either<String, &Uuid>, reason: S) -> bool
+    fn disconnect_player<S>(&self, identifier: Either<String, &Uuid>, reason: S) -> io::Result<bool>
     where
         S: Into<String>;
 }
@@ -87,29 +88,24 @@ impl Server for McServer {
         None
     }
 
-    // TODO: Refactor to make the player.disconnect function return a bool
-    fn disconnect_player<S>(&self, identifier: Either<String, &Uuid>, reason: S) -> bool
+    fn disconnect_player<S>(&self, identifier: Either<String, &Uuid>, reason: S) -> io::Result<bool>
     where
         S: Into<String>,
     {
         match identifier {
             Either::Either(name) => {
                 if let Some(mut player) = self.get_player_by_name(name) {
-                    player.disconnect(reason);
-                    true
-                } else {
-                    false
+                    return Ok(player.disconnect(reason)?);
                 }
             }
             Either::Or(uuid) => {
                 if let Some(mut player) = self.get_player_by_uuid(uuid) {
-                    player.disconnect(reason);
-                    true
-                } else {
-                    false
+                    return Ok(player.disconnect(reason)?);
                 }
             }
         }
+
+        Ok(false)
     }
 }
 
