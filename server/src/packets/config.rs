@@ -1,8 +1,5 @@
 use crate::encoder::Encoder;
-use crate::{
-    decoder::Decoder,
-    types::{ByteArray, VarInt},
-};
+use crate::{decoder::Decoder, types::VarInt};
 use macros::{Receivable, Streamable};
 use nbt::io::Nbt;
 use std::fs::File;
@@ -27,7 +24,7 @@ pub struct ClientInformation {
 #[derive(Receivable, Debug)]
 pub struct ServerboundPluginMessage {
     pub channel: String,
-    pub data: ByteArray,
+    pub data: Vec<u8>,
 }
 
 #[derive(Streamable, Clone)]
