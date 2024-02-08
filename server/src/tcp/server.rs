@@ -1,6 +1,7 @@
 use crate::decoder::{DecoderReadExt, ReceiveFromStream};
 use crate::encoder::SendToStream;
 use crate::packets::outgoing::play_disconnect::PlayDisconnect;
+use crate::player::mc_player::Player;
 use crate::{
     packets::{
         chunk::{ChunkDataUpdateLight, SetDefaultSpawnPosition, SynchronizePlayerPosition},
@@ -42,11 +43,22 @@ pub enum IngameState {
     Playing,
 }
 
+// Lol
+pub enum Either<T, U> {
+    Either(T),
+    Or(U),
+}
+
 pub trait Server {
     type Player;
 
+    // Getter
     fn get_player_by_uuid(&self, uuid: &Uuid) -> Option<Self::Player>;
     fn get_player_by_name(&self, name: String) -> Option<Self::Player>;
+
+    fn disconnect_player<S>(&self, identifier: Either<String, &Uuid>, reason: S) -> bool
+    where
+        S: Into<String>;
 }
 
 pub struct McServer {
@@ -73,6 +85,31 @@ impl Server for McServer {
         }
 
         None
+    }
+
+    // TODO: Refactor to make the player.disconnect function return a bool
+    fn disconnect_player<S>(&self, identifier: Either<String, &Uuid>, reason: S) -> bool
+    where
+        S: Into<String>,
+    {
+        match identifier {
+            Either::Either(name) => {
+                if let Some(mut player) = self.get_player_by_name(name) {
+                    player.disconnect(reason);
+                    true
+                } else {
+                    false
+                }
+            }
+            Either::Or(uuid) => {
+                if let Some(mut player) = self.get_player_by_uuid(uuid) {
+                    player.disconnect(reason);
+                    true
+                } else {
+                    false
+                }
+            }
+        }
     }
 }
 
@@ -126,6 +163,7 @@ impl McServer {
         }
     }
 
+    // TODO: Refactor so this function has only the player as parameter.
     async fn handle_connection(players: Arc<Mutex<Vec<McPlayer>>>, mut stream: TcpStream) {
         println!("{} connected", stream.peer_addr().unwrap());
         let mut gameplay_state = GameplayState::None;
