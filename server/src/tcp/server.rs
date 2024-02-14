@@ -199,6 +199,7 @@ impl McServer {
                             println!("[Config] Finishing configuration");
                             ingame_state = IngameState::Playing;
 
+                            //TODO Keep-Alive task should start here
                             PlayLogin::default().send(&mut stream).unwrap();
                             ChunkDataUpdateLight::default().send(&mut stream).unwrap();
                             SynchronizePlayerPosition::default().send(&mut stream).unwrap();
