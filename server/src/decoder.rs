@@ -2,8 +2,8 @@ use crate::{
     errors::DecodeError,
     types::{BitSet, Position, VarInt, VarLong},
 };
-use byteorder::{BigEndian, ReadBytesExt};
-use std::io::{Cursor, Read};
+use std::io::Cursor;
+use tokio::io::{AsyncRead, AsyncReadExt};
 use uuid::Uuid;
 
 static SEGMENT_BITS: u8 = 0x7F;
@@ -12,29 +12,29 @@ static CONTINUE_BIT: u8 = 0x80;
 pub trait Decoder {
     type Output;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError>;
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError>;
 }
 
 pub trait DecoderReadExt {
-    fn read_bool(&mut self) -> Result<bool, DecodeError>;
-    fn read_string(&mut self, max_length: u16) -> Result<String, DecodeError>;
-    fn read_byte_array(&mut self) -> Result<Vec<u8>, DecodeError>;
-    fn read_var_i32(&mut self) -> Result<i32, DecodeError>;
-    fn read_var_i64(&mut self) -> Result<i64, DecodeError>;
+    async fn read_bool(&mut self) -> Result<bool, DecodeError>;
+    async fn read_string(&mut self, max_length: u16) -> Result<String, DecodeError>;
+    async fn read_byte_array(&mut self) -> Result<Vec<u8>, DecodeError>;
+    async fn read_var_i32(&mut self) -> Result<i32, DecodeError>;
+    async fn read_var_i64(&mut self) -> Result<i64, DecodeError>;
 }
 
 pub trait ReceiveFromStream: Sized {
-    fn receive(buf: &mut Cursor<Vec<u8>>) -> Result<Self, DecodeError>;
+    async fn receive(buf: &mut Cursor<Vec<u8>>) -> Result<Self, DecodeError>;
 }
 
 macro_rules! read_signed_var_int (
     ($type: ident, $name: ident, $max_bytes: expr) => (
-        fn $name(&mut self) -> Result<$type, DecodeError> {
+        async fn $name(&mut self) -> Result<$type, DecodeError> {
             let mut bytes = 0;
             let mut output = 0;
 
             loop {
-                let byte = self.read_u8()?;
+                let byte = self.read_u8().await?;
                 let value = (byte & SEGMENT_BITS) as $type;
 
                 output |= value << 7 * bytes;
@@ -57,55 +57,55 @@ macro_rules! read_signed_var_int (
 impl Decoder for u8 {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        Ok(reader.read_u8()?)
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        Ok(reader.read_u8().await?)
     }
 }
 
 impl Decoder for i8 {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        Ok(reader.read_i8()?)
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        Ok(reader.read_i8().await?)
     }
 }
 
 impl Decoder for i16 {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        Ok(reader.read_i16::<BigEndian>()?)
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        Ok(reader.read_i16().await?)
     }
 }
 
 impl Decoder for i32 {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        Ok(reader.read_i32::<BigEndian>()?)
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        Ok(reader.read_i32().await?)
     }
 }
 
 impl Decoder for String {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        reader.read_string(32_768)
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        reader.read_string(32_768).await
     }
 }
 
 impl Decoder for bool {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        reader.read_bool()
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        reader.read_bool().await
     }
 }
 
 // impl Decoder for Vec<u8> {
 //     type Output = Self;
 
-//     fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+//     fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
 //         reader.read_byte_array()
 //     }
 // }
@@ -113,7 +113,7 @@ impl Decoder for bool {
 // impl Decoder for Vec<String> {
 //     type Output = Self;
 
-//     fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+//     fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
 //         let len = reader.read_var_i32()?;
 //         let mut buffer: Vec<String> = vec![0; len as usize];
 
@@ -128,80 +128,80 @@ impl Decoder for bool {
 impl Decoder for Uuid {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        Ok(Uuid::from_u128(reader.read_u128::<BigEndian>()?))
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        Ok(Uuid::from_u128(reader.read_u128().await?))
     }
 }
 
 impl Decoder for u16 {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        Ok(reader.read_u16::<BigEndian>()?)
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        Ok(reader.read_u16().await?)
     }
 }
 
 impl Decoder for u32 {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        Ok(reader.read_u32::<BigEndian>()?)
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        Ok(reader.read_u32().await?)
     }
 }
 
 impl Decoder for i64 {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        Ok(reader.read_i64::<BigEndian>()?)
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        Ok(reader.read_i64().await?)
     }
 }
 
 impl Decoder for u64 {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        Ok(reader.read_u64::<BigEndian>()?)
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        Ok(reader.read_u64().await?)
     }
 }
 
 impl Decoder for f32 {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        Ok(reader.read_f32::<BigEndian>()?)
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        Ok(reader.read_f32().await?)
     }
 }
 
 impl Decoder for f64 {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        Ok(reader.read_f64::<BigEndian>()?)
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        Ok(reader.read_f64().await?)
     }
 }
 
 impl Decoder for VarInt {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        Ok(VarInt(reader.read_var_i32()?))
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        Ok(VarInt(reader.read_var_i32().await?))
     }
 }
 
 impl Decoder for VarLong {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        Ok(VarLong(reader.read_var_i64()?))
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        Ok(VarLong(reader.read_var_i64().await?))
     }
 }
 
 impl Decoder for Position {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        Ok(Position::from(reader.read_u64::<BigEndian>()?))
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        Ok(Position::from(reader.read_u64().await?))
     }
 }
 
@@ -209,8 +209,8 @@ impl Decoder for Position {
 impl Decoder for BitSet {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        let bits = reader.read_byte_array()?;
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        let bits = reader.read_byte_array().await?;
         let chunks = bits
             .chunks_exact(8)
             .map(|chunk| {
@@ -229,51 +229,45 @@ impl Decoder for BitSet {
 impl<T: Decoder<Output = T>> Decoder for Vec<T> {
     type Output = Self;
 
-    fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {
-        let len = reader.read_var_i32()?;
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> Result<Self::Output, DecodeError> {
+        let len = reader.read_var_i32().await?;
         let mut x_vec: Vec<T> = Vec::with_capacity(len as usize);
 
         for _ in 0..len {
-            x_vec.push(T::decode(reader)?);
+            x_vec.push(T::decode(reader).await?);
         }
 
         Ok(x_vec)
     }
 }
 
-// impl<T: Decoder> Decoder for Option<T> {
-//     type Output = Self;
-
-//     fn decode<R: Read>(reader: &mut R) -> Result<Self::Output, DecodeError> {}
-// }
-
-impl<R: Read> DecoderReadExt for R {
-    fn read_bool(&mut self) -> Result<bool, DecodeError> {
-        match self.read_u8()? {
+impl<R: AsyncRead + Unpin> DecoderReadExt for R {
+    async fn read_bool(&mut self) -> Result<bool, DecodeError> {
+        match self.read_u8().await? {
             0 => Ok(false),
             1 => Ok(true),
             _ => Err(DecodeError::NonBoolValue),
         }
     }
 
-    fn read_byte_array(&mut self) -> Result<Vec<u8>, DecodeError> {
-        let length = self.read_var_i32()?;
+    async fn read_byte_array(&mut self) -> Result<Vec<u8>, DecodeError> {
+        let length = self.read_var_i32().await?;
 
         let mut buf = vec![0; length as usize];
-        self.read_exact(&mut buf)?;
+        self.read_exact(&mut buf).await?;
 
         Ok(buf)
     }
 
-    fn read_string(&mut self, max_length: u16) -> Result<String, DecodeError> {
-        let length = self.read_var_i32()? as usize;
+    async fn read_string(&mut self, max_length: u16) -> Result<String, DecodeError> {
+        let length = self.read_var_i32().await? as usize;
 
         if length as u16 > max_length {
             return Err(DecodeError::StringTooLong { length, max_length });
         }
 
         let mut buf = vec![0; length];
-        self.read_exact(&mut buf)?;
+        self.read_exact(&mut buf).await?;
 
         Ok(String::from_utf8(buf)?)
     }
