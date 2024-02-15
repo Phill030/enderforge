@@ -17,18 +17,18 @@ pub fn derive_serializable(input: TokenStream) -> TokenStream {
                 let field_names_2 = field_names.clone();
                 quote! {
                     impl Encoder for #struct_name {
-                        fn encode<W: Write>(&self, writer: &mut W) -> Result<(), EncodeError> {
-                            #(self.#field_names.encode(writer)?;)*
+                        async fn encode<W: tokio::io::AsyncWrite + Unpin + Send>(&self, writer: &mut W) -> Result<(), EncodeError> {
+                            #(self.#field_names.encode(writer).await?;)*
                             Ok(())
                         }
                     }
 
                     impl Encoder for Vec<#struct_name> {
-                        fn encode<W: Write>(&self, writer: &mut W) -> Result<(), EncodeError> {
-                            writer.write_var_i32(VarInt::from(self.len()))?;
+                        async fn encode<W: tokio::io::AsyncWrite + Unpin + Send>(&self, writer: &mut W) -> Result<(), EncodeError> {
+                            writer.write_var_i32(VarInt::from(self.len())).await?;
 
                             for x in self.to_vec() {
-                                #(x.#field_names_2.encode(writer)?;)*
+                                #(x.#field_names_2.encode(writer).await?;)*
                             }
 
                             Ok(())
@@ -92,12 +92,12 @@ pub fn derive_streamable(input: TokenStream) -> TokenStream {
                     }
 
                     impl crate::encoder::SendToStream for #struct_name {
-                        fn send(&self, stream: &mut std::net::TcpStream) -> Result<(), crate::errors::EncodeError> {
+                        async fn send(&self, stream: &mut tokio::net::TcpStream) -> Result<(), crate::errors::EncodeError> {
                             let mut buffer = vec![];
 
-                            #(self.#field_names.encode(&mut buffer)?;)*
-                            let buffer = crate::utils::prepare_response(crate::types::VarInt(#packet_id), buffer);
-                            Ok(stream.write_all(&buffer)?)
+                            #(self.#field_names.encode(&mut buffer).await?;)*
+                            let buffer = crate::utils::prepare_response(crate::types::VarInt(#packet_id), buffer).await;
+                            Ok(stream.write_all(&buffer).await?)
                         }
                     }
                 };
@@ -123,13 +123,13 @@ pub fn derive_receivable(input: TokenStream) -> TokenStream {
                     let field_type = &field.ty;
 
                     quote! {
-                        #field_name: <#field_type>::decode(cursor)?,
+                        #field_name: <#field_type>::decode(cursor).await?,
                     }
                 });
 
                 let gen = quote! {
                     impl crate::decoder::ReceiveFromStream for #struct_name {
-                        fn receive(cursor: &mut std::io::Cursor<Vec<u8>>) -> Result<Self, crate::errors::DecodeError> {
+                        async fn receive(cursor: &mut std::io::Cursor<Vec<u8>>) -> Result<Self, crate::errors::DecodeError> {
                             Ok(Self { #(#fields)* })
                         }
                     }
