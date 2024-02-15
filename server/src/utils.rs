@@ -12,13 +12,13 @@ pub fn system_time_millis() -> Result<u64, SystemTimeError> {
 }
 
 #[must_use]
-pub fn prepare_response(packet_id: VarInt, mut data: Vec<u8>) -> Vec<u8> {
+pub async fn prepare_response(packet_id: VarInt, mut data: Vec<u8>) -> Vec<u8> {
     let mut temp_buffer = vec![];
-    temp_buffer.write_var_i32(packet_id).unwrap();
+    temp_buffer.write_var_i32(packet_id).await.unwrap();
     temp_buffer.append(&mut data);
 
     let mut buffer = Vec::new();
-    buffer.write_var_i32(VarInt(temp_buffer.len() as i32)).unwrap();
+    buffer.write_var_i32(VarInt(temp_buffer.len() as i32)).await.unwrap();
     buffer.append(&mut temp_buffer);
 
     buffer
