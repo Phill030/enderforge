@@ -1,12 +1,10 @@
 use crate::{encoder::SendToStream, packets::outgoing::play_disconnect::PlayDisconnect};
-use std::{
-    io,
-    net::{Shutdown, TcpStream},
-};
+use std::io;
+use tokio::{io::AsyncWriteExt, net::TcpStream};
 use uuid::Uuid;
 
 pub trait Player {
-    fn disconnect<S>(&mut self, reason: S) -> io::Result<bool>
+    async fn disconnect<S>(&mut self, reason: S) -> io::Result<bool>
     where
         S: Into<String>,
         Self: Sized;
@@ -19,12 +17,12 @@ pub struct McPlayer {
 }
 
 impl Player for McPlayer {
-    fn disconnect<S>(&mut self, reason: S) -> io::Result<bool>
+    async fn disconnect<S>(&mut self, reason: S) -> io::Result<bool>
     where
         S: Into<String>,
     {
-        if let Ok(_) = PlayDisconnect::from_text(reason.into()).send(&mut self.stream) {
-            self.stream.shutdown(Shutdown::Both)?;
+        if let Ok(_) = PlayDisconnect::from_text(reason.into()).send(&mut self.stream).await {
+            self.stream.shutdown().await?;
             return Ok(true);
         }
 
@@ -32,12 +30,12 @@ impl Player for McPlayer {
     }
 }
 
-impl Clone for McPlayer {
-    fn clone(&self) -> Self {
-        Self {
-            stream: self.stream.try_clone().unwrap(),
-            username: self.username.clone(),
-            uuid: self.uuid.clone(),
-        }
-    }
-}
+// impl Clone for McPlayer {
+//     fn clone(&self) -> Self {
+//         Self {
+//             stream: self.stream,
+//             username: self.username.clone(),
+//             uuid: self.uuid.clone(),
+//         }
+//     }
+// }
