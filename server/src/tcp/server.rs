@@ -1,7 +1,5 @@
 use crate::decoder::{DecoderReadExt, ReceiveFromStream};
 use crate::encoder::SendToStream;
-use crate::packets::outgoing::play_disconnect::PlayDisconnect;
-use crate::player::mc_player::Player;
 use crate::{
     packets::{
         chunk::{ChunkDataUpdateLight, SetDefaultSpawnPosition, SynchronizePlayerPosition},
@@ -12,22 +10,24 @@ use crate::{
             player_position_rotation::PlayerPositionRotation, player_rotation::PlayerRotation,
         },
         login::{Login, LoginAcknowledge},
-        outgoing::keep_alive::KeepAlive,
+        outgoing::{keep_alive::KeepAlive, play_disconnect::PlayDisconnect},
         play::PlayLogin,
         status::Status,
     },
     player::mc_player::McPlayer,
 };
-use futures::future::join;
-use std::io;
 use std::{
     fmt::Debug,
-    io::{Cursor, Read},
-    net::{TcpListener, TcpStream, ToSocketAddrs},
+    io,
+    io::Cursor,
     sync::{Arc, Mutex},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use tokio::{task, time};
+use tokio::{
+    io::AsyncReadExt,
+    net::{TcpListener, TcpStream, ToSocketAddrs},
+    task, time,
+};
 use uuid::Uuid;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
@@ -66,48 +66,48 @@ pub struct McServer {
     players: Arc<Mutex<Vec<McPlayer>>>,
 }
 
-impl Server for McServer {
-    type Player = McPlayer;
+// impl Server for McServer {
+//     type Player = McPlayer;
 
-    fn get_player_by_uuid(&self, uuid: &Uuid) -> Option<Self::Player> {
-        if let Ok(players) = self.players.lock() {
-            if let Some(player) = players.iter().find(|p| p.uuid.eq(uuid)) {
-                return Some(player.clone());
-            }
-        }
-        None
-    }
+//     fn get_player_by_uuid(&self, uuid: &Uuid) -> Option<Self::Player> {
+//         if let Ok(players) = self.players.lock() {
+//             if let Some(player) = players.iter().find(|p| p.uuid.eq(uuid)) {
+//                 return Some(player.clone());
+//             }
+//         }
+//         None
+//     }
 
-    fn get_player_by_name(&self, name: String) -> Option<Self::Player> {
-        if let Ok(players) = self.players.lock() {
-            if let Some(player) = players.iter().find(|p| p.username.eq(&name)) {
-                return Some(player.clone());
-            }
-        }
+//     fn get_player_by_name(&self, name: String) -> Option<Self::Player> {
+//         if let Ok(players) = self.players.lock() {
+//             if let Some(player) = players.iter().find(|p| p.username.eq(&name)) {
+//                 return Some(player.clone());
+//             }
+//         }
 
-        None
-    }
+//         None
+//     }
 
-    fn disconnect_player<S>(&self, identifier: Either<String, &Uuid>, reason: S) -> io::Result<bool>
-    where
-        S: Into<String>,
-    {
-        match identifier {
-            Either::Either(name) => {
-                if let Some(mut player) = self.get_player_by_name(name) {
-                    return Ok(player.disconnect(reason)?);
-                }
-            }
-            Either::Or(uuid) => {
-                if let Some(mut player) = self.get_player_by_uuid(uuid) {
-                    return Ok(player.disconnect(reason)?);
-                }
-            }
-        }
+//     async fn disconnect_player<S>(&self, identifier: Either<String, &Uuid>, reason: S) -> io::Result<bool>
+//     where
+//         S: Into<String>,
+//     {
+//         match identifier {
+//             Either::Either(name) => {
+//                 if let Some(mut player) = self.get_player_by_name(name) {
+//                     return Ok(player.disconnect(reason).await?);
+//                 }
+//             }
+//             Either::Or(uuid) => {
+//                 if let Some(mut player) = self.get_player_by_uuid(uuid) {
+//                     return Ok(player.disconnect(reason)?);
+//                 }
+//             }
+//         }
 
-        Ok(false)
-    }
-}
+//         Ok(false)
+//     }
+// }
 
 impl McServer {
     pub fn new() -> Self {
@@ -120,28 +120,17 @@ impl McServer {
     where
         E: ToSocketAddrs + Debug,
     {
-        let listener = TcpListener::bind(endpoint)?;
+        let listener = TcpListener::bind(endpoint).await?;
         println!("Server started @ {endpoint:?}");
 
-        for stream in listener.incoming() {
+        loop {
             let players = self.players.clone();
+            let (socket, _) = listener.accept().await?;
 
-            match stream {
-                Ok(stream) => {
-                    let cloned_stream = stream.try_clone()?;
-
-                    let connection_task = task::spawn(Self::handle_connection(players.clone(), stream));
-                    let keep_alive_task = task::spawn(Self::handle_keep_alive(cloned_stream));
-
-                    join(connection_task, keep_alive_task).await;
-                }
-                Err(_) => {
-                    eprintln!("There was an error while accepting the incoming connection!");
-                }
-            };
+            task::spawn(async move { Self::handle_connection(players.clone(), socket).await })
+                .await
+                .unwrap();
         }
-
-        Ok(())
     }
 
     async fn handle_keep_alive(mut stream: TcpStream) {
@@ -155,6 +144,7 @@ impl McServer {
             println!("[KeepAlive] sending to player...");
             KeepAlive::new(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64)
                 .send(&mut stream)
+                .await
                 .unwrap();
         }
     }
@@ -166,7 +156,7 @@ impl McServer {
         let mut ingame_state = IngameState::Config;
 
         loop {
-            let len = stream.read_var_i32().unwrap_or(0) as usize;
+            let len = stream.read_var_i32().await.unwrap_or(0) as usize;
 
             if len == 0 {
                 println!("{} disconnected", stream.peer_addr().unwrap());
@@ -174,37 +164,38 @@ impl McServer {
             }
 
             let mut packet_buffer: Vec<u8> = vec![0u8; len];
-            stream.read_exact(&mut packet_buffer).unwrap();
+            stream.read_exact(&mut packet_buffer).await.unwrap();
 
             let mut cursor = Cursor::new(packet_buffer);
-            let packet_id = cursor.read_var_i32().unwrap();
+            let packet_id = cursor.read_var_i32().await.unwrap();
 
             match gameplay_state {
-                GameplayState::None => HandShake::handle(&mut cursor, &mut gameplay_state, &mut stream),
-                GameplayState::Status => Status::handle(&mut stream),
-                GameplayState::Login => Login::handle(&mut cursor, players.clone(), &mut gameplay_state, &mut stream),
-                GameplayState::LoginAcknowledge => LoginAcknowledge::handle(&mut stream, &mut gameplay_state),
+                GameplayState::None => HandShake::handle(&mut cursor, &mut gameplay_state, &mut stream).await,
+                GameplayState::Status => Status::handle(&mut stream).await,
+                GameplayState::Login => Login::handle(&mut cursor, players.clone(), &mut gameplay_state, &mut stream).await,
+                GameplayState::LoginAcknowledge => LoginAcknowledge::handle(&mut stream, &mut gameplay_state).await,
                 GameplayState::Play => match ingame_state {
                     IngameState::Config => match packet_id {
                         0x00 => {
-                            let client_information = ClientInformation::receive(&mut cursor).unwrap();
+                            let client_information = ClientInformation::receive(&mut cursor).await.unwrap();
                             println!("{:?}", client_information);
                         }
                         0x01 => {
-                            let plugin_response = ServerboundPluginMessage::receive(&mut cursor).unwrap();
+                            let plugin_response = ServerboundPluginMessage::receive(&mut cursor).await.unwrap();
                             println!("{:?}", plugin_response);
                         }
                         0x02 => {
-                            ReceiveFinishConfiguration::receive(&mut cursor).unwrap();
+                            ReceiveFinishConfiguration::receive(&mut cursor).await.unwrap();
                             println!("[Config] Finishing configuration");
                             ingame_state = IngameState::Playing;
 
                             //TODO Keep-Alive task should start here
-                            PlayLogin::default().send(&mut stream).unwrap();
-                            ChunkDataUpdateLight::default().send(&mut stream).unwrap();
-                            SynchronizePlayerPosition::default().send(&mut stream).unwrap();
-                            GameEvent::default().send(&mut stream).unwrap();
-                            SetDefaultSpawnPosition::default().send(&mut stream).unwrap();
+
+                            PlayLogin::default().send(&mut stream).await.unwrap();
+                            ChunkDataUpdateLight::default().send(&mut stream).await.unwrap();
+                            SynchronizePlayerPosition::default().send(&mut stream).await.unwrap();
+                            GameEvent::default().send(&mut stream).await.unwrap();
+                            SetDefaultSpawnPosition::default().send(&mut stream).await.unwrap();
                         }
                         _ => {
                             println!("len_{len} packetId_{packet_id}");
@@ -214,27 +205,28 @@ impl McServer {
                     IngameState::Playing => match packet_id {
                         // Chat Message
                         0x05 => {
-                            let message = cursor.read_string(256).unwrap();
+                            let message = cursor.read_string(256).await.unwrap();
                             PlayDisconnect::from_text(format!("{}", message.repeat(50)))
                                 .send(&mut stream)
+                                .await
                                 .unwrap();
                         }
 
                         // KeepAlive Response
                         0x15 => {
-                            let res = KeepAliveResponse::receive(&mut cursor).unwrap();
+                            let res = KeepAliveResponse::receive(&mut cursor).await.unwrap();
                             println!("KeepAlive response: {}", res.id);
                         }
 
                         // Player Position
                         0x17 => {
-                            let pos = PlayerPosition::receive(&mut cursor).unwrap();
+                            let pos = PlayerPosition::receive(&mut cursor).await.unwrap();
                             println!("{},{},{} [{}]", pos.x, pos.y, pos.z, pos.on_ground);
                         }
 
                         // Player Position and rotation
                         0x18 => {
-                            let pos_rot = PlayerPositionRotation::receive(&mut cursor).unwrap();
+                            let pos_rot = PlayerPositionRotation::receive(&mut cursor).await.unwrap();
                             println!(
                                 "{},{},{} | {} | {} | [{}]",
                                 pos_rot.x, pos_rot.y, pos_rot.z, pos_rot.yaw, pos_rot.pitch, pos_rot.on_ground
@@ -243,7 +235,7 @@ impl McServer {
 
                         // Player rotation
                         0x19 => {
-                            let rot = PlayerRotation::receive(&mut cursor).unwrap();
+                            let rot = PlayerRotation::receive(&mut cursor).await.unwrap();
                             println!("{} | {} | [{}]", rot.yaw, rot.pitch, rot.on_ground);
                         }
 
@@ -253,6 +245,7 @@ impl McServer {
                         }
                     },
                 },
+                _ => {}
             }
         }
     }
