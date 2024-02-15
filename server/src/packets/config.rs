@@ -3,7 +3,8 @@ use crate::{decoder::Decoder, types::VarInt};
 use macros::{Receivable, Streamable};
 use nbt::io::Nbt;
 use std::fs::File;
-use std::io::{Cursor, Read, Write};
+use std::io::{Cursor, Read};
+use tokio::io::AsyncWriteExt;
 
 #[derive(Streamable, Default)]
 #[packet_id(0x02)]
@@ -33,13 +34,13 @@ pub struct RegistryData {
     registry_codec: Nbt,
 }
 
-impl Default for RegistryData {
-    fn default() -> Self {
+impl RegistryData {
+    pub async fn create() -> Self {
         let mut f = File::open(r"./dimension_codec.nbt").unwrap();
         let mut buffer = vec![];
         f.read_to_end(&mut buffer).unwrap();
         let mut cursor = Cursor::new(buffer);
-        let nbt = Nbt::from_reader(&mut cursor).unwrap();
+        let nbt = Nbt::from_reader(&mut cursor).await.unwrap();
 
         Self { registry_codec: nbt }
     }

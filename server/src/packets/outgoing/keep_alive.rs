@@ -1,6 +1,6 @@
-use crate::encoder::Encoder;
+use crate::encoder::{Encoder, SendToStream};
 use macros::Streamable;
-use std::io::Write;
+use tokio::{io::AsyncWriteExt, net::tcp::WriteHalf};
 
 #[derive(Streamable)]
 #[packet_id(0x24)]

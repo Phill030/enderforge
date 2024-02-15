@@ -5,7 +5,8 @@ use crate::tcp::server::GameplayState;
 use crate::types::VarInt;
 use macros::Receivable;
 use std::io::Cursor;
-use std::net::TcpStream;
+use tokio::io::AsyncWriteExt;
+use tokio::net::TcpStream;
 
 #[derive(Receivable)]
 pub struct HandShake {
@@ -16,8 +17,8 @@ pub struct HandShake {
 }
 
 impl HandShake {
-    pub fn handle(cursor: &mut Cursor<Vec<u8>>, state: &mut GameplayState, stream: &mut TcpStream) {
-        let handshake = HandShake::receive(cursor).unwrap();
+    pub async fn handle(cursor: &mut Cursor<Vec<u8>>, state: &mut GameplayState, stream: &mut TcpStream) {
+        let handshake = HandShake::receive(cursor).await.unwrap();
 
         println!(
             "[HandShake] ProtocolVersion: {} | Address: {} | Port: {} | NextState: {}",
@@ -33,12 +34,13 @@ impl HandShake {
                     String::from("https://www.youtube.com/watch?v=8gGQFRk5hJw"),
                 )
                 .send(stream)
+                .await
                 .unwrap();
 
                 *state = GameplayState::Status;
             }
             VarInt(2) => *state = GameplayState::Login,
-            _ => stream.shutdown(std::net::Shutdown::Both).unwrap(),
+            _ => stream.shutdown().await.unwrap(),
         };
     }
 }

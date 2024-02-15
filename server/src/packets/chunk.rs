@@ -8,7 +8,7 @@ use macros::{Serializable, Streamable};
 use nbt::io::Nbt;
 use nbt::types::Tag;
 use std::collections::HashMap;
-use std::io::Write;
+use tokio::io::AsyncWriteExt;
 
 #[derive(Streamable)]
 #[packet_id(0x25)]

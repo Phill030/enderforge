@@ -1,7 +1,8 @@
 use crate::encoder::Encoder;
 use macros::Streamable;
 use nbt::{io::Nbt, types::Tag};
-use std::{collections::HashMap, io::Write};
+use std::collections::HashMap;
+use tokio::io::AsyncWriteExt;
 
 #[derive(Streamable)]
 #[packet_id(0x1B)]

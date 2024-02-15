@@ -1,10 +1,8 @@
-use crate::encoder::Encoder;
-use crate::encoder::EncoderWriteExt;
+use crate::encoder::{Encoder, EncoderWriteExt};
 use crate::errors::EncodeError;
-use crate::types::Position;
-use crate::types::VarInt;
+use crate::types::{Position, VarInt};
 use macros::{Serializable, Streamable};
-use std::io::Write;
+use tokio::io::AsyncWriteExt;
 
 #[derive(Streamable)]
 #[packet_id(0x29)]
