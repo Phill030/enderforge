@@ -1,5 +1,5 @@
 use crate::decoder::{Decoder, ReceiveFromStream};
-use crate::encoder::SendToStream;
+use crate::encoder::SendToWriter;
 use crate::packets::status::PlayerListResponse;
 use crate::tcp::server::GameplayState;
 use crate::types::VarInt;

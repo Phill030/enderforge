@@ -91,7 +91,7 @@ pub fn derive_streamable(input: TokenStream) -> TokenStream {
                         }
                     }
 
-                    impl crate::encoder::SendToStream for #struct_name {
+                    impl crate::encoder::SendToWriter for #struct_name {
                         async fn send<W>(&self, stream: &mut W) -> Result<(), crate::errors::EncodeError>
                         where
                             W: AsyncWrite + Unpin {

@@ -1,5 +1,5 @@
 use crate::encoder::Encoder;
-use crate::encoder::SendToStream;
+use crate::encoder::SendToWriter;
 use crate::utils::system_time_millis;
 use macros::Streamable;
 use serde::{Deserialize, Serialize};

@@ -21,7 +21,7 @@ pub trait EncoderWriteExt {
     async fn write_uuid(&mut self, value: Uuid) -> Result<(), EncodeError>;
 }
 
-pub trait SendToStream {
+pub trait SendToWriter {
     async fn send<W>(&self, stream: &mut W) -> Result<(), EncodeError>
     where
         W: AsyncWrite + Unpin;

@@ -1,4 +1,4 @@
-use crate::{encoder::SendToStream, packets::outgoing::play_disconnect::PlayDisconnect};
+use crate::{encoder::SendToWriter, packets::outgoing::play_disconnect::PlayDisconnect};
 use std::io;
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 use uuid::Uuid;

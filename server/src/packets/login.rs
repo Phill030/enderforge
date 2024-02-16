@@ -1,6 +1,6 @@
 use crate::{
     decoder::{Decoder, ReceiveFromStream},
-    encoder::{Encoder, EncoderWriteExt, SendToStream},
+    encoder::{Encoder, EncoderWriteExt, SendToWriter},
     errors::EncodeError,
     packets::config::{FinishConfiguration, RegistryData},
     player::mc_player::McPlayer,

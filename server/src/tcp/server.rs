@@ -1,5 +1,5 @@
 use crate::decoder::{DecoderReadExt, ReceiveFromStream};
-use crate::encoder::SendToStream;
+use crate::encoder::SendToWriter;
 use crate::{
     packets::{
         chunk::{ChunkDataUpdateLight, SetDefaultSpawnPosition, SynchronizePlayerPosition},
