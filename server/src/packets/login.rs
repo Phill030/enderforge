@@ -14,7 +14,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tokio::io::AsyncWriteExt;
-use tokio::net::TcpStream;
+use tokio::{io::AsyncWrite, net::tcp::OwnedWriteHalf};
 use uuid::Uuid;
 
 #[allow(dead_code)]
@@ -28,7 +28,7 @@ pub struct LoginStart {
 pub struct LoginAcknowledge {}
 
 impl LoginAcknowledge {
-    pub async fn handle(stream: &mut TcpStream, gameplay_state: &mut GameplayState) {
+    pub async fn handle(stream: &mut OwnedWriteHalf, gameplay_state: &mut GameplayState) {
         println!("[LoginAck] Received");
         *gameplay_state = GameplayState::Play;
 
@@ -69,7 +69,7 @@ impl Login {
         cursor: &mut Cursor<Vec<u8>>,
         players: Arc<Mutex<Vec<McPlayer>>>,
         state: &mut GameplayState,
-        stream: &mut TcpStream,
+        stream: &mut OwnedWriteHalf,
     ) {
         let login_start = LoginStart::receive(cursor).await.unwrap();
         println!("[Login] Username: {} | UUID: {}", login_start.username, login_start.uuid);

@@ -3,7 +3,9 @@ use crate::encoder::SendToStream;
 use crate::utils::system_time_millis;
 use macros::Streamable;
 use serde::{Deserialize, Serialize};
+use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
+use tokio::net::tcp::OwnedWriteHalf;
 use tokio::net::TcpStream;
 use uuid::Uuid;
 
@@ -96,7 +98,7 @@ impl PingResponse {
 
 pub struct Status;
 impl Status {
-    pub async fn handle(stream: &mut TcpStream) {
+    pub async fn handle(stream: &mut OwnedWriteHalf) {
         PingResponse::new().send(stream).await.unwrap();
     }
 }

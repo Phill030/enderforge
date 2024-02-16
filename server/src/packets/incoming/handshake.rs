@@ -6,7 +6,7 @@ use crate::types::VarInt;
 use macros::Receivable;
 use std::io::Cursor;
 use tokio::io::AsyncWriteExt;
-use tokio::net::TcpStream;
+use tokio::net::tcp::OwnedWriteHalf;
 
 #[derive(Receivable)]
 pub struct HandShake {
@@ -17,7 +17,7 @@ pub struct HandShake {
 }
 
 impl HandShake {
-    pub async fn handle(cursor: &mut Cursor<Vec<u8>>, state: &mut GameplayState, stream: &mut TcpStream) {
+    pub async fn handle(cursor: &mut Cursor<Vec<u8>>, state: &mut GameplayState, stream: &mut OwnedWriteHalf) {
         let handshake = HandShake::receive(cursor).await.unwrap();
 
         println!(
