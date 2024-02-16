@@ -55,10 +55,8 @@ pub trait Server {
     type Player;
 
     // Getter
-    fn get_player_by_uuid(&self, uuid: &Uuid) -> Option<Self::Player>;
-    fn get_player_by_name(&self, name: String) -> Option<Self::Player>;
-
-    fn disconnect_player<S>(&self, identifier: Either<String, &Uuid>, reason: S) -> io::Result<bool>
+    fn get_player_by_identifier(&self, iddentifier: Either<String, &Uuid>) -> Option<Self::Player>;
+    fn disconnect_player<S>(&self, identifier: Self::Player, reason: S) -> io::Result<bool>
     where
         S: Into<String>;
 }
@@ -70,44 +68,44 @@ pub struct McServer {
 // impl Server for McServer {
 //     type Player = McPlayer;
 
-//     fn get_player_by_uuid(&self, uuid: &Uuid) -> Option<Self::Player> {
+//     async fn get_player_by_uuid(&self, uuid: &Uuid) -> Option<Self::Player> {
 //         if let Ok(players) = self.players.lock() {
 //             if let Some(player) = players.iter().find(|p| p.uuid.eq(uuid)) {
-//                 return Some(player.clone());
+//                 return Some(player);
 //             }
 //         }
 //         None
 //     }
 
-//     fn get_player_by_name(&self, name: String) -> Option<Self::Player> {
-//         if let Ok(players) = self.players.lock() {
-//             if let Some(player) = players.iter().find(|p| p.username.eq(&name)) {
-//                 return Some(player.clone());
-//             }
+// fn get_player_by_name(&self, name: String) -> Option<Self::Player> {
+//     if let Ok(players) = self.players.lock() {
+//         if let Some(player) = players.iter().find(|p| p.username.eq(&name)) {
+//             return Some(player.clone());
 //         }
-
-//         None
 //     }
 
-//     async fn disconnect_player<S>(&self, identifier: Either<String, &Uuid>, reason: S) -> io::Result<bool>
-//     where
-//         S: Into<String>,
-//     {
-//         match identifier {
-//             Either::Either(name) => {
-//                 if let Some(mut player) = self.get_player_by_name(name) {
-//                     return Ok(player.disconnect(reason).await?);
-//                 }
-//             }
-//             Either::Or(uuid) => {
-//                 if let Some(mut player) = self.get_player_by_uuid(uuid) {
-//                     return Ok(player.disconnect(reason)?);
-//                 }
+//     None
+// }
+
+// async fn disconnect_player<S>(&self, identifier: Either<String, &Uuid>, reason: S) -> io::Result<bool>
+// where
+//     S: Into<String>,
+// {
+//     match identifier {
+//         Either::Either(name) => {
+//             if let Some(mut player) = self.get_player_by_name(name) {
+//                 return Ok(player.disconnect(reason).await?);
 //             }
 //         }
-
-//         Ok(false)
+//         Either::Or(uuid) => {
+//             if let Some(mut player) = self.get_player_by_uuid(uuid) {
+//                 return Ok(player.disconnect(reason)?);
+//             }
+//         }
 //     }
+
+//     Ok(false)
+// }
 // }
 
 impl McServer {
@@ -142,6 +140,7 @@ impl McServer {
 
         loop {
             interval_timer.tick().await;
+
             println!("[KeepAlive] sending to player...");
             KeepAlive::new(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64)
                 .send(&mut write)
