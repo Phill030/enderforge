@@ -84,19 +84,19 @@ impl Position {
 impl From<u64> for Position {
     fn from(value: u64) -> Self {
         let mut x: f32 = (value >> 38) as f32;
-        let mut y: f32 = (value << 52 >> 52) as f32;
         let mut z: f32 = (value << 26 >> 38) as f32;
+        let mut y: f32 = (value << 52 >> 52) as f32;
 
         if x >= (1u64 << 25u64) as f32 {
             x -= (1 << 26) as f32;
         }
 
-        if y >= (1u64 << 11u64) as f32 {
-            y -= (1 << 12) as f32;
-        }
-
         if z >= (1u64 << 25u64) as f32 {
             z -= (1 << 26) as f32;
+        }
+
+        if y >= (1u64 << 11u64) as f32 {
+            y -= (1 << 12) as f32;
         }
 
         Self { x, z, y }
@@ -109,29 +109,29 @@ impl From<Position> for u64 {
     }
 }
 
-/// https://wiki.vg/Protocol#BitSet
+/// <https://wiki.vg/Protocol#BitSet>
 pub struct BitSet(pub Vec<i64>);
 impl BitSet {
-    /// Constructor to create a new BitSet with a specified size
+    /// Constructor to create a new `BitSet` with a specified size
     ///
     /// # Arguments
     ///
-    /// * `size` - The number of bits in the BitSet
+    /// * `size` - The number of bits in the `BitSet`
     ///
     /// # Returns
     ///
-    /// A new BitSet with all bits initially set to 0
+    /// A new `BitSet` with all bits initially set to 0
     pub fn new(size: usize) -> Self {
         let num_i64s = (size + 63) / 64;
         let bits = vec![0; num_i64s];
         Self(bits)
     }
 
-    /// Creates an empty BitSet.
+    /// Creates an empty `BitSet`.
     ///
     /// # Returns
     ///
-    /// A new BitSet instance with no initial data.
+    /// A new `BitSet` instance with no initial data.
     pub fn empty() -> Self {
         Self(vec![])
     }
@@ -184,10 +184,10 @@ impl BitSet {
         self.0[i64_index] ^= 1 << bit_index;
     }
 
-    /// Get the size of the BitSet
+    /// Get the size of the `BitSet`
     ///
     /// # Returns
-    /// The size of the BitSet
+    /// The size of the `BitSet`
     pub fn size(&self) -> usize {
         self.0.len()
     }
