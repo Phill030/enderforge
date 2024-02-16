@@ -2,6 +2,7 @@ use crate::encoder::{Encoder, EncoderWriteExt};
 use crate::errors::EncodeError;
 use crate::types::{Position, VarInt};
 use macros::{Serializable, Streamable};
+use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 
 #[derive(Streamable)]

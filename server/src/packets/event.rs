@@ -1,5 +1,6 @@
 use crate::encoder::Encoder;
 use macros::Streamable;
+use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 
 #[derive(Streamable)]

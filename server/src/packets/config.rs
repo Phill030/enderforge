@@ -4,6 +4,7 @@ use macros::{Receivable, Streamable};
 use nbt::io::Nbt;
 use std::fs::File;
 use std::io::{Cursor, Read};
+use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 
 #[derive(Streamable, Default)]
