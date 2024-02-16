@@ -4,10 +4,7 @@ use crate::{
     utils::MAX_STRING_LEN,
 };
 use nbt::io::Nbt;
-use tokio::{
-    io::{AsyncWrite, AsyncWriteExt},
-    net::TcpStream,
-};
+use tokio::io::{AsyncWrite, AsyncWriteExt};
 use uuid::Uuid;
 
 pub trait Encoder {
@@ -25,7 +22,9 @@ pub trait EncoderWriteExt {
 }
 
 pub trait SendToStream {
-    async fn send(&self, stream: &mut TcpStream) -> Result<(), EncodeError>;
+    async fn send<W>(&self, stream: &mut W) -> Result<(), EncodeError>
+    where
+        W: AsyncWrite + Unpin;
 }
 
 macro_rules! write_signed_var_int (

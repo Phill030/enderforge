@@ -92,7 +92,9 @@ pub fn derive_streamable(input: TokenStream) -> TokenStream {
                     }
 
                     impl crate::encoder::SendToStream for #struct_name {
-                        async fn send(&self, stream: &mut tokio::net::TcpStream) -> Result<(), crate::errors::EncodeError> {
+                        async fn send<W>(&self, stream: &mut W) -> Result<(), crate::errors::EncodeError>
+                        where
+                            W: AsyncWrite + Unpin {
                             let mut buffer = vec![];
 
                             #(self.#field_names.encode(&mut buffer).await?;)*
