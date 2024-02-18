@@ -23,10 +23,9 @@ use std::{
     sync::{Arc, Mutex},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use tokio::net::tcp::OwnedWriteHalf;
 use tokio::{
     io::AsyncReadExt,
-    net::{TcpListener, TcpStream, ToSocketAddrs},
+    net::{tcp::OwnedWriteHalf, TcpListener, TcpStream, ToSocketAddrs},
     task, time,
 };
 use uuid::Uuid;
@@ -56,7 +55,10 @@ pub trait Server {
 
     // Getter
     fn get_player_by_identifier(&self, iddentifier: Either<String, &Uuid>) -> Option<Self::Player>;
-    fn disconnect_player<S>(&self, identifier: Self::Player, reason: S) -> io::Result<bool>
+    fn disconnect_player<S>(&self, player: Self::Player, reason: S) -> io::Result<bool>
+    where
+        S: Into<String>;
+    fn disconnect_player_by_identifier<S>(&self, identifier: Either<String, &Uuid>, reason: S) -> io::Result<bool>
     where
         S: Into<String>;
 }
@@ -126,13 +128,14 @@ impl McServer {
             let players = self.players.clone();
             let (socket, _) = listener.accept().await?;
 
+            task::spawn(async move { Self::handle_keep_alive(&mut socket) });
             task::spawn(async move { Self::handle_connection(players.clone(), socket).await })
                 .await
                 .unwrap();
         }
     }
 
-    async fn handle_keep_alive(mut write: OwnedWriteHalf) {
+    async fn handle_keep_alive(mut write: &mut TcpStream) {
         println!("Starting KeepAlive thread...");
 
         let mut interval_timer = time::interval(Duration::from_secs(15));
@@ -149,7 +152,6 @@ impl McServer {
         }
     }
 
-    // TODO: Refactor so this function has only the player as parameter.
     async fn handle_connection(players: Arc<Mutex<Vec<McPlayer>>>, stream: TcpStream) {
         println!("{} connected", stream.peer_addr().unwrap());
         let mut gameplay_state = GameplayState::None;
@@ -192,7 +194,7 @@ impl McServer {
                             println!("[Config] Finishing configuration");
                             ingame_state = IngameState::Playing;
 
-                            //TODO Keep-Alive task should start here
+                            //TODO Keep-Alive task should start here but can't because the tokio TcpStream can't be cloned
                             // task::spawn(async move { Self::handle_keep_alive(&mut write) });
 
                             PlayLogin::default().send(&mut write).await.unwrap();
