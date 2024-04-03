@@ -25,7 +25,7 @@ use std::{
 };
 use tokio::{
     io::AsyncReadExt,
-    net::{tcp::OwnedWriteHalf, TcpListener, TcpStream, ToSocketAddrs},
+    net::{TcpListener, TcpStream, ToSocketAddrs},
     task, time,
 };
 use uuid::Uuid;
@@ -128,7 +128,7 @@ impl McServer {
             let players = self.players.clone();
             let (socket, _) = listener.accept().await?;
 
-            task::spawn(async move { Self::handle_keep_alive(&mut socket) });
+            // task::spawn(async move { Self::handle_keep_alive(&mut socket) });
             task::spawn(async move { Self::handle_connection(players.clone(), socket).await })
                 .await
                 .unwrap();
