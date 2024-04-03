@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-proc-macro2 = "1.0.78"
+proc-macro2 = "1.0.79"
 quote = "1.0.35"
-syn = "2.0.48"
+syn = "2.0.57"
 
 [profile.release]
 opt-level = 'z'   # Optimize for size

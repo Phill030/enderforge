@@ -7,5 +7,5 @@ edition = "2021"
 flate2 = "1.0.28"
 cesu8 = "1.1.0"
 byteorder = "1.5.0"
-tokio = { version = "1.36.0", features = ["full"] }
-async-recursion = "1.0.5"
+tokio = { version = "1.37.0", features = ["full"] }
+async-recursion = "1.1.0"
