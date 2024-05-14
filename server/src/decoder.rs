@@ -1,6 +1,6 @@
 use crate::{
     errors::DecodeError,
-    types::{BitSet, Position, VarInt, VarLong},
+    types::{Position, VarInt, VarLong},
 };
 use std::io::Cursor;
 use tokio::io::{AsyncRead, AsyncReadExt};
