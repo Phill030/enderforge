@@ -205,11 +205,6 @@ where
                         }
                     },
                 },
-
-                _ => {
-                    println!("len_{len} packetId_{packet_id}");
-                    println!("{}", String::from_utf8_lossy(&cursor.into_inner()).to_string())
-                }
             }
         }
     }
