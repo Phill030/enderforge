@@ -141,7 +141,7 @@ impl BitSet {
     }
 
     // Check if a specific bit is set
-    fn get(&self, bit_index: u32) -> bool {
+    pub fn get(&self, bit_index: u32) -> bool {
         if bit_index < self.len.0 as u32 * 64 {
             let idx = bit_index as usize / 64;
             let bit_pos = bit_index as usize % 64;
@@ -152,20 +152,59 @@ impl BitSet {
     }
 }
 
-pub struct PalettedContainer {
-    /// Determines how many bits are used to encode entries. Note that not all numbers are valid here.
-    bits_per_entry: u8,
-    palette: VarInt,
-    /// Number of longs in the following array. This value isn't entirely respected by the Notchian client. If it is smaller than expected, it will be overridden by the correct size calculated from Bits Per Entry. If too large, the client will read the specified number of longs, but silently discard all of them afterwards, resulting in a chunk filled with palette entry 0 (which appears to have been unintentional). Present but equal to 0 when Bits Per Entry is 0.
-    data_len: VarInt,
-    data: Vec<i64>,
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(u16)]
+pub enum Block {
+    Air = 0,
+    Stone = 1,
+    Granite = 2,
+    PolishedGranite = 3,
+    Diorite = 4,
+    PolishedDiorite = 5,
+    Andesite = 6,
+    PolishedAndesite = 7,
+    VoidAir = 12817,
+    CaveAir = 12818,
 }
 
+impl Block {
+    pub fn is_empty(&self) -> bool {
+        use Block::*;
+        matches!(self, Air | VoidAir | CaveAir)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ChunkSection {
-    /// Number of non-air blocks present in the chunk section. "Non-air" is defined as any fluid and block other than air, cave air, and void air. The client will keep count of the blocks as they are broken and placed, and, if the block count reaches 0, the whole chunk section is not rendered, even if it still has blocks.
-    block_count: i16,
-    /// Consists of 4096 entries, representing all the blocks in the chunk section.
-    block_states: PalettedContainer,
-    /// Consists of 64 entries, representing 4×4×4 biome regions in the chunk section.
-    biomes: PalettedContainer,
+    pub blocks: Vec<Block>,
+}
+
+impl ChunkSection {
+    pub fn get_block(&self, x: i32, y: i32, z: i32) -> Option<&Block> {
+        self.blocks.get(((x & 15) + (z & 15) * 16 + (y & 15) * 256) as usize)
+    }
+
+    pub fn is_empty(&self, x: i32, y: i32, z: i32) -> bool {
+        self.get_block(x, y, z).unwrap_or(&Block::Air).is_empty()
+    }
+
+    pub fn max_height_at(&self, x: i32, z: i32) -> Option<i32> {
+        for y in (0..16).rev() {
+            if let Some(block) = self.get_block(x, y, z) {
+                if !block.is_empty() {
+                    return Some(y);
+                }
+            }
+        }
+        None
+    }
+
+    pub fn get_highest_block_at(&self, x: i32, z: i32) -> Option<&Block> {
+        for y in (0..16).rev() {
+            if let Some(block) = self.get_block(x, y, z) {
+                return Some(block);
+            }
+        }
+        None
+    }
 }
